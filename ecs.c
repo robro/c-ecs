@@ -18,93 +18,97 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
-typedef struct PhysicsComponent physics_component;
-typedef void (*physics_func) (physics_component*);
-
-struct PhysicsComponent {
+typedef struct {
 	vec2 Position;
 	vec2 Velocity;
 	vec2 Gravity;
-	physics_func Update;
-};
+} physics_component;
+
+typedef struct {
+	float JumpForce;
+	float GroundHeight;
+} jumper_component;
+
+typedef struct {
+	float ShakeSpeed;
+} shaker_component;
 
 physics_component PhysicsComponents[MAX_ENTITIES];
-uint PhysicsComponentIndex = 0;
-uint TotalPhysicsComponents = 0;
-
-void UpdatePosition(physics_component *PhysicsComponent) {
-	PhysicsComponent->Position.x += PhysicsComponent->Velocity.x;
-	PhysicsComponent->Position.y += PhysicsComponent->Velocity.y;
-}
-
-void AddGravity(physics_component *PhysicsComponent) {
-	PhysicsComponent->Velocity.x += PhysicsComponent->Gravity.x;
-	PhysicsComponent->Velocity.y += PhysicsComponent->Gravity.y;
-}
+jumper_component JumperComponents[MAX_ENTITIES];
+shaker_component ShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-typedef struct {
-	uint ComponentMask;
-} entity;
-
-void JumperPhysicsUpdate(physics_component *PhysicsComponent) {
-	if (PhysicsComponent->Position.y == 0) {
-		PhysicsComponent->Velocity.y = -100;
-	}
-	AddGravity(PhysicsComponent);
-	UpdatePosition(PhysicsComponent);
-	if (PhysicsComponent->Position.y >= 0) {
-		PhysicsComponent->Position.y = 0;
-		PhysicsComponent->Velocity.y = 0;
-	}
-}
-
-int NewJumper(vec2 Position) {
-	PhysicsComponents[PhysicsComponentIndex] = (physics_component){
+int NewJumper(vec2 Position, float JumpForce) {
+	JumperComponents[EntityIndex] = (jumper_component){
+		.JumpForce = JumpForce,
+		.GroundHeight = Position.y,
+	};
+	PhysicsComponents[EntityIndex] = (physics_component){
 		.Position = Position,
 		.Velocity = VELOCITY_ZERO,
 		.Gravity = GRAVITY,
-		.Update = JumperPhysicsUpdate,
 	};
-	TotalPhysicsComponents++;
-	PhysicsComponentIndex++;
 	TotalEntities++;
 	return EntityIndex++;
 }
 
-void ShakerPhysicsUpdate(physics_component *PhysicsComponent) {
-	if (PhysicsComponent->Velocity.x > 0) {
-		PhysicsComponent->Velocity.x = -10;
-	}
-	else {
-		PhysicsComponent->Velocity.x = 10;
-	}
-	UpdatePosition(PhysicsComponent);
-}
-
-int NewShaker(vec2 Position) {
-	PhysicsComponents[PhysicsComponentIndex] = (physics_component){
+int NewShaker(vec2 Position, float ShakeSpeed) {
+	ShakerComponents[EntityIndex] = (shaker_component){
+		.ShakeSpeed = ShakeSpeed,
+	};
+	PhysicsComponents[EntityIndex] = (physics_component){
 		.Position = Position,
 		.Velocity = VELOCITY_ZERO,
 		.Gravity = VELOCITY_ZERO,
-		.Update = ShakerPhysicsUpdate,
 	};
-	TotalPhysicsComponents++;
-	PhysicsComponentIndex++;
 	TotalEntities++;
 	return EntityIndex++;
 }
 
+/* ==== SYSTEMS ==================================== */
+
+void UpdateJumpers() {
+	for (int i = 0; i < TotalEntities; ++i) {
+		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
+			PhysicsComponents[i].Position.y = JumperComponents[i].GroundHeight;
+			PhysicsComponents[i].Velocity.y = -JumperComponents[i].JumpForce;
+		}
+	}
+}
+
+void UpdateShakers() {
+	for (int i = 0; i < TotalEntities; ++i) {
+		if (PhysicsComponents[i].Velocity.x >= 0) {
+			PhysicsComponents[i].Velocity.x = -ShakerComponents[i].ShakeSpeed;
+		} else {
+			PhysicsComponents[i].Velocity.x = ShakerComponents[i].ShakeSpeed;
+		}
+	}
+}
+
+void UpdatePhysics() {
+	for (int i = 0; i < TotalEntities; ++i) {
+		// Add gravity
+		PhysicsComponents[i].Velocity.x += PhysicsComponents[i].Gravity.x;
+		PhysicsComponents[i].Velocity.y += PhysicsComponents[i].Gravity.y;
+
+		// Update position
+		PhysicsComponents[i].Position.x += PhysicsComponents[i].Velocity.x;
+		PhysicsComponents[i].Position.y += PhysicsComponents[i].Velocity.y;
+
+		printf("Pos(%f, %f)\n", PhysicsComponents[i].Position.x, PhysicsComponents[i].Position.y);
+	}
+}
+
 int main() {
-	int jumper_id = NewJumper((vec2){4, 5});
-	int shaker_id = NewShaker((vec2){-3, 9});
+	int jumper_id = NewJumper((vec2){4, 5}, 100);
+	int shaker_id = NewShaker((vec2){-3, 9}, 10);
 
 	while (1) {
-		for (int i = 0; i < TotalPhysicsComponents; ++i) {
-			PhysicsComponents[i].Update(&PhysicsComponents[i]);
-			printf("Position(%f, %f)\n", PhysicsComponents[i].Position.x, PhysicsComponents[i].Position.y);
-		}
+		UpdateJumpers();
+		UpdateShakers();
+		UpdatePhysics();
 		sleep(1);
 	}
 	return 0;
