@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
-#define MAX_ENTITIES 10
+#define MAX_ENTITIES 1000
+#define TARGET_FPS 60
 
 uint EntityIndex = 0;
 uint TotalEntities = 0;
@@ -13,7 +15,7 @@ typedef struct {
 	float y;
 } vec2;
 
-#define VELOCITY_ZERO (vec2){0, 0}
+#define VEC_ZERO (vec2){0, 0}
 #define GRAVITY (vec2){0, 9.8}
 
 /* ==== COMPONENTS ================================== */
@@ -46,7 +48,7 @@ int NewJumper(vec2 Position, float JumpForce) {
 	};
 	PhysicsComponents[EntityIndex] = (physics_component){
 		.Position = Position,
-		.Velocity = VELOCITY_ZERO,
+		.Velocity = VEC_ZERO,
 		.Gravity = GRAVITY,
 	};
 	TotalEntities++;
@@ -59,8 +61,8 @@ int NewShaker(vec2 Position, float ShakeSpeed) {
 	};
 	PhysicsComponents[EntityIndex] = (physics_component){
 		.Position = Position,
-		.Velocity = VELOCITY_ZERO,
-		.Gravity = VELOCITY_ZERO,
+		.Velocity = VEC_ZERO,
+		.Gravity = VEC_ZERO,
 	};
 	TotalEntities++;
 	return EntityIndex++;
@@ -68,7 +70,7 @@ int NewShaker(vec2 Position, float ShakeSpeed) {
 
 /* ==== SYSTEMS ==================================== */
 
-void UpdateJumpers() {
+void UpdateJumpers(long Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
 			PhysicsComponents[i].Position.y = JumperComponents[i].GroundHeight;
@@ -77,7 +79,7 @@ void UpdateJumpers() {
 	}
 }
 
-void UpdateShakers() {
+void UpdateShakers(long Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (PhysicsComponents[i].Velocity.x >= 0) {
 			PhysicsComponents[i].Velocity.x = -ShakerComponents[i].ShakeSpeed;
@@ -87,7 +89,7 @@ void UpdateShakers() {
 	}
 }
 
-void UpdatePhysics() {
+void UpdatePhysics(long Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		// Add gravity
 		PhysicsComponents[i].Velocity.x += PhysicsComponents[i].Gravity.x;
@@ -97,19 +99,39 @@ void UpdatePhysics() {
 		PhysicsComponents[i].Position.x += PhysicsComponents[i].Velocity.x;
 		PhysicsComponents[i].Position.y += PhysicsComponents[i].Velocity.y;
 
-		printf("Pos(%f, %f)\n", PhysicsComponents[i].Position.x, PhysicsComponents[i].Position.y);
+		// printf("Pos(%f, %f)\n", PhysicsComponents[i].Position.x, PhysicsComponents[i].Position.y);
 	}
 }
 
-int main() {
-	int jumper_id = NewJumper((vec2){4, 5}, 100);
-	int shaker_id = NewShaker((vec2){-3, 9}, 10);
+typedef void (*update_func) (long);
+update_func UpdateFuncs[] = {
+	UpdateJumpers,
+	UpdateShakers,
+	UpdatePhysics,
+};
+size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
 
-	while (1) {
-		UpdateJumpers();
-		UpdateShakers();
-		UpdatePhysics();
-		sleep(1);
+int main() {
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		NewJumper(VEC_ZERO, 100);
 	}
+
+	printf("Starting test...\n");
+	double FrameDelta = 0;
+	double TargetDelta = 1.0 / TARGET_FPS;
+	struct timeval TimeStart, TimeEnd;
+	gettimeofday(&TimeStart, NULL);
+
+	// Gameloop
+	for (int i = 0; i < 10; ++i) {
+		for (int j = 0; j < UpdateFuncsCount; ++j) {
+			UpdateFuncs[j](FrameDelta);
+		}
+		gettimeofday(&TimeEnd, NULL);
+		FrameDelta = (double)((TimeEnd.tv_sec-TimeStart.tv_sec)*1000000 + (TimeEnd.tv_usec-TimeStart.tv_usec))/1000000;
+		TimeStart = TimeEnd;
+		printf("Frame delta:  %lf secs | Target delta: %lf secs\n", FrameDelta, TargetDelta);
+	}
+
 	return 0;
 }
