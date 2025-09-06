@@ -1,3 +1,4 @@
+#include <bits/time.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
@@ -7,9 +8,8 @@
 #define MAX_ENTITIES 1000
 #define TARGET_FPS 60
 
-#define USECS_IN_SEC 1000000
-#define NSECS_IN_USEC 1000
-#define TARGET_USECS (USECS_IN_SEC / TARGET_FPS)
+#define NSECS_IN_SEC 1000000000
+#define TARGET_DELTA (1.0 / TARGET_FPS)
 
 #define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
@@ -47,7 +47,7 @@ shaker_component ShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int NewJumper(vec2 Position, float JumpForce) {
+int new_jumper(vec2 Position, float JumpForce) {
 	JumperComponents[EntityIndex] = (jumper_component){
 		.JumpForce = JumpForce,
 		.GroundHeight = Position.y,
@@ -61,7 +61,7 @@ int NewJumper(vec2 Position, float JumpForce) {
 	return EntityIndex++;
 }
 
-int NewShaker(vec2 Position, float ShakeSpeed) {
+int new_shaker(vec2 Position, float ShakeSpeed) {
 	ShakerComponents[EntityIndex] = (shaker_component){
 		.ShakeSpeed = ShakeSpeed,
 	};
@@ -76,7 +76,7 @@ int NewShaker(vec2 Position, float ShakeSpeed) {
 
 /* ==== SYSTEMS ==================================== */
 
-void UpdateJumpers(double Delta) {
+void update_jumpers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
 			PhysicsComponents[i].Position.y = JumperComponents[i].GroundHeight;
@@ -85,7 +85,7 @@ void UpdateJumpers(double Delta) {
 	}
 }
 
-void UpdateShakers(double Delta) {
+void update_shakers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (PhysicsComponents[i].Velocity.x >= 0) {
 			PhysicsComponents[i].Velocity.x = -ShakerComponents[i].ShakeSpeed;
@@ -95,7 +95,7 @@ void UpdateShakers(double Delta) {
 	}
 }
 
-void UpdatePhysics(double Delta) {
+void update_physics(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		// Add gravity
 		PhysicsComponents[i].Velocity.x += PhysicsComponents[i].Gravity.x * Delta;
@@ -110,46 +110,56 @@ void UpdatePhysics(double Delta) {
 }
 
 typedef void (*update_func)(double);
-update_func UpdateFuncs[] = {
-	UpdateJumpers,
-	UpdateShakers,
-	UpdatePhysics,
+update_func update_funcs[] = {
+	update_jumpers,
+	update_shakers,
+	update_physics,
 };
-size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
+size_t UpdateFuncsCount = ARRAY_LENGTH(update_funcs);
 
-long GetDeltaUSecs(struct timeval TimeStart, struct timeval TimeEnd) {
-	return (TimeEnd.tv_sec - TimeStart.tv_sec) * USECS_IN_SEC + (TimeEnd.tv_usec - TimeStart.tv_usec);
+struct timespec diff_timespec(const struct timespec *A, const struct timespec *B) {
+	struct timespec diff = {
+		.tv_sec = A->tv_sec - B->tv_sec,
+		.tv_nsec = A->tv_nsec - B->tv_nsec,
+	};
+	if (diff.tv_nsec < 0) {
+		diff.tv_nsec += NSECS_IN_SEC;
+		diff.tv_sec--;
+	}
+	return diff;
+}
+
+long timespec_to_nsecs(const struct timespec *Time) {
+	return Time->tv_sec * NSECS_IN_SEC + Time->tv_nsec;
 }
 
 int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		NewJumper(VEC_ZERO, 100);
+		new_jumper(VEC_ZERO, 100);
 	}
 
-	struct timeval TimeStart, TimeEnd;
-	struct timespec Sleep;
-	double TargetDelta = 1.0 / TARGET_FPS;
-	double FrameDelta = TargetDelta;
-	long FrameUSecs;
+	struct timespec TimeStart, TimeEnd, Sleep, WorkTime, FrameTime;
+	struct timespec TargetDelta = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	double FrameDelta = TARGET_DELTA;
 
 	printf("Starting test...\n");
-	gettimeofday(&TimeStart, NULL);
+	clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 
-	// Gameloop
+	// Game Loop
 	for (int i = 0; i < 10; ++i) {
 		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			UpdateFuncs[j](FrameDelta);
+			update_funcs[j](FrameDelta);
 		}
-		gettimeofday(&TimeEnd, NULL);
-		FrameUSecs = GetDeltaUSecs(TimeStart, TimeEnd);
-		if (FrameUSecs < TARGET_USECS) {
-			Sleep.tv_sec = (TARGET_USECS - FrameUSecs) / USECS_IN_SEC;
-			Sleep.tv_nsec = ((TARGET_USECS - FrameUSecs) % USECS_IN_SEC) * NSECS_IN_USEC;
+		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
+		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
+		Sleep = diff_timespec(&TargetDelta, &WorkTime);
+		if (Sleep.tv_sec >= 0) {
 			nanosleep(&Sleep, NULL);
 		}
-		gettimeofday(&TimeEnd, NULL);
-		FrameDelta = (double)GetDeltaUSecs(TimeStart, TimeEnd) / USECS_IN_SEC;
-		printf("Frame time:  %lf secs | ", (double)FrameUSecs / USECS_IN_SEC);
+		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
+		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
+		FrameDelta = (double)timespec_to_nsecs(&FrameTime) / NSECS_IN_SEC;
+		printf("Frame time:  %lf secs | ", (double)timespec_to_nsecs(&WorkTime) / NSECS_IN_SEC);
 		printf("Frame delta: %lf secs\n", FrameDelta);
 		TimeStart = TimeEnd;
 	}
