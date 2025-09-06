@@ -9,7 +9,7 @@
 
 #define USECS_IN_SEC 1000000
 #define NSECS_IN_USEC 1000
-#define TARGET_USECS USECS_IN_SEC / TARGET_FPS
+#define TARGET_USECS (USECS_IN_SEC / TARGET_FPS)
 
 #define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
