@@ -153,13 +153,13 @@ int main() {
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
 		SleepTime = diff_timespec(&TargetFrameTime, &WorkTime);
-		if (SleepTime.tv_sec >= 0) {
+		if (SleepTime.tv_sec >= 0 && SleepTime.tv_nsec > 0) {
 			nanosleep(&SleepTime, NULL);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
 		Delta = (double)timespec_to_ns(&FrameTime) / NSECS_IN_SEC;
-		printf("Work time:  %lf secs | ", (double)timespec_to_ns(&WorkTime) / NSECS_IN_SEC);
+		printf("Work time: %lf secs | ", (double)timespec_to_ns(&WorkTime) / NSECS_IN_SEC);
 		printf("Frame time: %lf secs\n", Delta);
 	}
 
