@@ -5,11 +5,13 @@
 #include <unistd.h>
 #include <sys/time.h>
 
+#define DEBUG 1
+
 #define MAX_ENTITIES 1000
 #define TARGET_FPS 60
 
+#define FIXED_DELTA (1.0 / TARGET_FPS)
 #define NSECS_IN_SEC 1000000000
-#define TARGET_DELTA (1.0 / TARGET_FPS)
 
 #define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
 
@@ -140,7 +142,6 @@ int main() {
 
 	struct timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
 	struct timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
-	double Delta = TARGET_DELTA;
 
 	printf("Starting test...\n");
 
@@ -148,7 +149,7 @@ int main() {
 	for (int i = 0; i < 10; ++i) {
 		clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			update_funcs[j](Delta);
+			update_funcs[j](FIXED_DELTA);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
@@ -156,11 +157,12 @@ int main() {
 		if (SleepTime.tv_sec >= 0 && SleepTime.tv_nsec > 0) {
 			nanosleep(&SleepTime, NULL);
 		}
+#if DEBUG
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
-		Delta = (double)timespec_to_ns(&FrameTime) / NSECS_IN_SEC;
 		printf("Work time: %lf secs | ", (double)timespec_to_ns(&WorkTime) / NSECS_IN_SEC);
-		printf("Frame time: %lf secs\n", Delta);
+		printf("Frame time: %lf secs\n", (double)timespec_to_ns(&FrameTime) / NSECS_IN_SEC);
+#endif
 	}
 
 	return 0;
