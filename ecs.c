@@ -184,8 +184,11 @@ int main() {
 #if DEBUG_BUILD
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
-		printf("Work time: %lf secs | ", timespec_to_secs(&WorkTime));
-		printf("Frame time: %lf secs\n", timespec_to_secs(&FrameTime));
+		printf(
+			"Work time: %lf secs | Frame time: %lf secs\n",
+			timespec_to_secs(&WorkTime),
+			timespec_to_secs(&FrameTime)
+		);
 #endif
 	}
 
