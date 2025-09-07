@@ -50,9 +50,9 @@ physics_component PhysicsComponents[MAX_ENTITIES];
 jumper_component JumperComponents[MAX_ENTITIES];
 shaker_component ShakerComponents[MAX_ENTITIES];
 
-bool InitializedPhysicsComponents[MAX_ENTITIES];
-bool InitializedJumperComponents[MAX_ENTITIES];
-bool InitializedShakerComponents[MAX_ENTITIES];
+bool PhysicsComponentsInitialized[MAX_ENTITIES];
+bool JumperComponentsInitialized[MAX_ENTITIES];
+bool ShakerComponentsInitialized[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
@@ -67,8 +67,8 @@ int new_jumper(vec2 Position, float JumpForce) {
 		.Gravity = GRAVITY,
 	};
 
-	InitializedJumperComponents[EntityIndex] = true;
-	InitializedPhysicsComponents[EntityIndex] = true;
+	JumperComponentsInitialized[EntityIndex] = true;
+	PhysicsComponentsInitialized[EntityIndex] = true;
 
 	TotalEntities++;
 	return EntityIndex++;
@@ -84,8 +84,8 @@ int new_shaker(vec2 Position, float ShakeSpeed) {
 		.Gravity = VEC_ZERO,
 	};
 
-	InitializedShakerComponents[EntityIndex] = true;
-	InitializedPhysicsComponents[EntityIndex] = true;
+	ShakerComponentsInitialized[EntityIndex] = true;
+	PhysicsComponentsInitialized[EntityIndex] = true;
 
 	TotalEntities++;
 	return EntityIndex++;
@@ -95,7 +95,7 @@ int new_shaker(vec2 Position, float ShakeSpeed) {
 
 void update_jumpers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!InitializedJumperComponents[i]) {
+		if (!JumperComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
 			return;
 		}
 		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
@@ -107,7 +107,7 @@ void update_jumpers(double Delta) {
 
 void update_shakers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!InitializedShakerComponents[i]) {
+		if (!ShakerComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
 			return;
 		}
 		if (PhysicsComponents[i].Velocity.x >= 0) {
@@ -120,7 +120,7 @@ void update_shakers(double Delta) {
 
 void update_physics(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!InitializedPhysicsComponents[i]) {
+		if (!PhysicsComponentsInitialized[i]) {
 			return;
 		}
 		// Add gravity
