@@ -93,7 +93,7 @@ int new_shaker(vec2 Position, float ShakeSpeed) {
 
 /* ==== SYSTEMS ==================================== */
 
-void update_jumpers(double Delta) {
+void update_jumpers(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (!JumperComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
 			return;
@@ -105,7 +105,7 @@ void update_jumpers(double Delta) {
 	}
 }
 
-void update_shakers(double Delta) {
+void update_shakers(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (!ShakerComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
 			return;
@@ -118,7 +118,7 @@ void update_shakers(double Delta) {
 	}
 }
 
-void update_physics(double Delta) {
+void update_physics(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
 		if (!PhysicsComponentsInitialized[i]) {
 			return;
@@ -135,7 +135,7 @@ void update_physics(double Delta) {
 	}
 }
 
-typedef void (*update_func)(double);
+typedef void (*update_func)(float);
 update_func UpdateFuncs[] = {
 	update_jumpers,
 	update_shakers,
@@ -155,8 +155,8 @@ timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
 	return diff;
 }
 
-double timespec_to_secs(const timespec *Time) {
-	return Time->tv_sec + (double)Time->tv_nsec / NSECS_IN_SEC;
+float timespec_to_secs(const timespec *Time) {
+	return Time->tv_sec + (float)Time->tv_nsec / NSECS_IN_SEC;
 }
 
 int main() {
