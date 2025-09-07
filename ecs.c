@@ -7,7 +7,7 @@
 
 #define DEBUG 1
 
-#define MAX_ENTITIES 1000
+#define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
 
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
@@ -131,8 +131,8 @@ struct timespec diff_timespec(const struct timespec *A, const struct timespec *B
 	return diff;
 }
 
-long timespec_to_ns(const struct timespec *Time) {
-	return Time->tv_sec * NSECS_IN_SEC + Time->tv_nsec;
+double timespec_to_secs(const struct timespec *Time) {
+	return Time->tv_sec + (double)Time->tv_nsec / NSECS_IN_SEC;
 }
 
 int main() {
@@ -160,8 +160,8 @@ int main() {
 #if DEBUG
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
-		printf("Work time: %lf secs | ", (double)timespec_to_ns(&WorkTime) / NSECS_IN_SEC);
-		printf("Frame time: %lf secs\n", (double)timespec_to_ns(&FrameTime) / NSECS_IN_SEC);
+		printf("Work time: %lf secs | ", timespec_to_secs(&WorkTime));
+		printf("Frame time: %lf secs\n", timespec_to_secs(&FrameTime));
 #endif
 	}
 
