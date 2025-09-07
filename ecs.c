@@ -16,6 +16,8 @@
 
 #define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
 
+typedef struct timespec timespec;
+
 uint EntityIndex = 0;
 uint TotalEntities = 0;
 
@@ -141,10 +143,10 @@ update_func update_funcs[] = {
 };
 size_t UpdateFuncsCount = ARRAY_LENGTH(update_funcs);
 
-struct timespec diff_timespec(const struct timespec *A, const struct timespec *B) {
-	struct timespec diff = {
-		.tv_sec = A->tv_sec - B->tv_sec,
-		.tv_nsec = A->tv_nsec - B->tv_nsec,
+timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
+	timespec diff = {
+		.tv_sec = TimeA->tv_sec - TimeB->tv_sec,
+		.tv_nsec = TimeA->tv_nsec - TimeB->tv_nsec,
 	};
 	if (diff.tv_nsec < 0) {
 		diff.tv_nsec += NSECS_IN_SEC;
@@ -153,7 +155,7 @@ struct timespec diff_timespec(const struct timespec *A, const struct timespec *B
 	return diff;
 }
 
-double timespec_to_secs(const struct timespec *Time) {
+double timespec_to_secs(const timespec *Time) {
 	return Time->tv_sec + (double)Time->tv_nsec / NSECS_IN_SEC;
 }
 
@@ -162,8 +164,8 @@ int main() {
 		new_jumper(VEC_ZERO, 100);
 	}
 
-	struct timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
-	struct timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
+	timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
 
 	printf("Starting test...\n");
 
