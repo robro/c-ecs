@@ -4,6 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <stdbool.h>
 
 #define DEBUG 1
 
@@ -47,6 +48,10 @@ physics_component PhysicsComponents[MAX_ENTITIES];
 jumper_component JumperComponents[MAX_ENTITIES];
 shaker_component ShakerComponents[MAX_ENTITIES];
 
+bool InitializedPhysicsComponents[MAX_ENTITIES];
+bool InitializedJumperComponents[MAX_ENTITIES];
+bool InitializedShakerComponents[MAX_ENTITIES];
+
 /* ==== ENTITIES ==================================== */
 
 int new_jumper(vec2 Position, float JumpForce) {
@@ -59,6 +64,10 @@ int new_jumper(vec2 Position, float JumpForce) {
 		.Velocity = VEC_ZERO,
 		.Gravity = GRAVITY,
 	};
+
+	InitializedJumperComponents[EntityIndex] = true;
+	InitializedPhysicsComponents[EntityIndex] = true;
+
 	TotalEntities++;
 	return EntityIndex++;
 }
@@ -72,6 +81,10 @@ int new_shaker(vec2 Position, float ShakeSpeed) {
 		.Velocity = VEC_ZERO,
 		.Gravity = VEC_ZERO,
 	};
+
+	InitializedShakerComponents[EntityIndex] = true;
+	InitializedPhysicsComponents[EntityIndex] = true;
+
 	TotalEntities++;
 	return EntityIndex++;
 }
@@ -80,6 +93,9 @@ int new_shaker(vec2 Position, float ShakeSpeed) {
 
 void update_jumpers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
+		if (!InitializedJumperComponents[i]) {
+			return;
+		}
 		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
 			PhysicsComponents[i].Position.y = JumperComponents[i].GroundHeight;
 			PhysicsComponents[i].Velocity.y = -JumperComponents[i].JumpForce;
@@ -89,6 +105,9 @@ void update_jumpers(double Delta) {
 
 void update_shakers(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
+		if (!InitializedShakerComponents[i]) {
+			return;
+		}
 		if (PhysicsComponents[i].Velocity.x >= 0) {
 			PhysicsComponents[i].Velocity.x = -ShakerComponents[i].ShakeSpeed;
 		} else {
@@ -99,6 +118,9 @@ void update_shakers(double Delta) {
 
 void update_physics(double Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
+		if (!InitializedPhysicsComponents[i]) {
+			return;
+		}
 		// Add gravity
 		PhysicsComponents[i].Velocity.x += PhysicsComponents[i].Gravity.x * Delta;
 		PhysicsComponents[i].Velocity.y += PhysicsComponents[i].Gravity.y * Delta;
