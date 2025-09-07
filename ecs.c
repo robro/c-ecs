@@ -159,8 +159,8 @@ int main() {
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
 		FrameDelta = (double)timespec_to_nsecs(&FrameTime) / NSECS_IN_SEC;
-		printf("Frame time:  %lf secs | ", (double)timespec_to_nsecs(&WorkTime) / NSECS_IN_SEC);
-		printf("Frame delta: %lf secs\n", FrameDelta);
+		printf("Work time:  %lf secs | ", (double)timespec_to_nsecs(&WorkTime) / NSECS_IN_SEC);
+		printf("Frame time: %lf secs\n", FrameDelta);
 		TimeStart = TimeEnd;
 	}
 
