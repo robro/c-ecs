@@ -129,7 +129,7 @@ struct timespec diff_timespec(const struct timespec *A, const struct timespec *B
 	return diff;
 }
 
-long timespec_to_nsecs(const struct timespec *Time) {
+long timespec_to_ns(const struct timespec *Time) {
 	return Time->tv_sec * NSECS_IN_SEC + Time->tv_nsec;
 }
 
@@ -138,30 +138,29 @@ int main() {
 		new_jumper(VEC_ZERO, 100);
 	}
 
-	struct timespec TimeStart, TimeEnd, Sleep, WorkTime, FrameTime;
-	struct timespec TargetDelta = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
-	double FrameDelta = TARGET_DELTA;
+	struct timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
+	struct timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	double Delta = TARGET_DELTA;
 
 	printf("Starting test...\n");
-	clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 
 	// Game Loop
 	for (int i = 0; i < 10; ++i) {
+		clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			update_funcs[j](FrameDelta);
+			update_funcs[j](Delta);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
-		Sleep = diff_timespec(&TargetDelta, &WorkTime);
-		if (Sleep.tv_sec >= 0) {
-			nanosleep(&Sleep, NULL);
+		SleepTime = diff_timespec(&TargetFrameTime, &WorkTime);
+		if (SleepTime.tv_sec >= 0) {
+			nanosleep(&SleepTime, NULL);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
-		FrameDelta = (double)timespec_to_nsecs(&FrameTime) / NSECS_IN_SEC;
-		printf("Work time:  %lf secs | ", (double)timespec_to_nsecs(&WorkTime) / NSECS_IN_SEC);
-		printf("Frame time: %lf secs\n", FrameDelta);
-		TimeStart = TimeEnd;
+		Delta = (double)timespec_to_ns(&FrameTime) / NSECS_IN_SEC;
+		printf("Work time:  %lf secs | ", (double)timespec_to_ns(&WorkTime) / NSECS_IN_SEC);
+		printf("Frame time: %lf secs\n", Delta);
 	}
 
 	return 0;
