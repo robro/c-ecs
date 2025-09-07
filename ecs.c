@@ -136,12 +136,12 @@ void update_physics(double Delta) {
 }
 
 typedef void (*update_func)(double);
-update_func update_funcs[] = {
+update_func UpdateFuncs[] = {
 	update_jumpers,
 	update_shakers,
 	update_physics,
 };
-size_t UpdateFuncsCount = ARRAY_LENGTH(update_funcs);
+size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
 
 timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
 	timespec diff = {
@@ -173,7 +173,7 @@ int main() {
 	for (int i = 0; i < 10; ++i) {
 		clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			update_funcs[j](SECS_PER_FRAME);
+			UpdateFuncs[j](SECS_PER_FRAME);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
