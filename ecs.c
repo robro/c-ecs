@@ -6,7 +6,7 @@
 #include <sys/time.h>
 #include <stdbool.h>
 
-#define DEBUG 1
+#define DEBUG_BUILD 1
 
 #define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
@@ -14,7 +14,7 @@
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
 #define NSECS_IN_SEC 1000000000
 
-#define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
+#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
 
 uint EntityIndex = 0;
 uint TotalEntities = 0;
@@ -179,7 +179,7 @@ int main() {
 		if (SleepTime.tv_sec >= 0 && SleepTime.tv_nsec > 0) {
 			nanosleep(&SleepTime, NULL);
 		}
-#if DEBUG
+#if DEBUG_BUILD
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
 		printf("Work time: %lf secs | ", timespec_to_secs(&WorkTime));
