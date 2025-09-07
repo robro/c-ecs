@@ -10,7 +10,7 @@
 #define MAX_ENTITIES 1000
 #define TARGET_FPS 60
 
-#define FIXED_DELTA (1.0 / TARGET_FPS)
+#define SECS_PER_FRAME (1.0 / TARGET_FPS)
 #define NSECS_IN_SEC 1000000000
 
 #define ARRAY_LENGTH(arr) sizeof(arr)/sizeof(arr[0])
@@ -149,7 +149,7 @@ int main() {
 	for (int i = 0; i < 10; ++i) {
 		clock_gettime(CLOCK_MONOTONIC, &TimeStart);
 		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			update_funcs[j](FIXED_DELTA);
+			update_funcs[j](SECS_PER_FRAME);
 		}
 		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
 		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
