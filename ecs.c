@@ -56,16 +56,9 @@ bool ShakerComponentsInitialized[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int new_jumper(vec2 Position, float JumpForce) {
-	JumperComponents[EntityIndex] = (jumper_component){
-		.JumpForce = JumpForce,
-		.GroundHeight = Position.y,
-	};
-	PhysicsComponents[EntityIndex] = (physics_component){
-		.Position = Position,
-		.Velocity = VEC_ZERO,
-		.Gravity = GRAVITY,
-	};
+int new_jumper(jumper_component Jumper, physics_component Physics) {
+	JumperComponents[EntityIndex] = Jumper;
+	PhysicsComponents[EntityIndex] = Physics;
 
 	JumperComponentsInitialized[EntityIndex] = true;
 	PhysicsComponentsInitialized[EntityIndex] = true;
@@ -74,15 +67,9 @@ int new_jumper(vec2 Position, float JumpForce) {
 	return EntityIndex++;
 }
 
-int new_shaker(vec2 Position, float ShakeSpeed) {
-	ShakerComponents[EntityIndex] = (shaker_component){
-		.ShakeSpeed = ShakeSpeed,
-	};
-	PhysicsComponents[EntityIndex] = (physics_component){
-		.Position = Position,
-		.Velocity = VEC_ZERO,
-		.Gravity = VEC_ZERO,
-	};
+int new_shaker(shaker_component Shaker, physics_component Physics) {
+	ShakerComponents[EntityIndex] = Shaker;
+	PhysicsComponents[EntityIndex] = Physics;
 
 	ShakerComponentsInitialized[EntityIndex] = true;
 	PhysicsComponentsInitialized[EntityIndex] = true;
@@ -136,12 +123,12 @@ void update_physics(float Delta) {
 }
 
 typedef void (*update_func)(float);
-update_func UpdateFuncs[] = {
+const update_func UpdateFuncs[] = {
 	update_jumpers,
 	update_shakers,
 	update_physics,
 };
-size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
+const size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
 
 timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
 	timespec diff = {
@@ -161,11 +148,21 @@ float timespec_to_secs(const timespec *Time) {
 
 int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_jumper(VEC_ZERO, 100);
+		new_jumper(
+			(jumper_component){
+				.JumpForce = 100,
+				.GroundHeight = 0.0,
+			},
+			(physics_component){
+				 .Position = VEC_ZERO,
+				 .Velocity = VEC_ZERO,
+				 .Gravity = GRAVITY,
+			}
+		);
 	}
 
 	timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
-	timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	const timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
 
 	printf("Starting test...\n");
 
