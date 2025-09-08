@@ -54,9 +54,9 @@ typedef struct {
 		SHAKER,
 	} Type;
 	union {
-		physics_component Physics;
-		jumper_component Jumper;
-		shaker_component Shaker;
+		physics_component *Physics;
+		jumper_component *Jumper;
+		shaker_component *Shaker;
 	};
 } component;
 
@@ -74,15 +74,15 @@ int new_entity(component Components[], size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
 		switch (Components[i].Type) {
 		case JUMPER:
-			JumperComponents[EntityIndex] = Components[i].Jumper;
+			JumperComponents[EntityIndex] = *Components[i].Jumper;
 			ActiveJumperComponents[EntityIndex] = true;
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = Components[i].Shaker;
+			ShakerComponents[EntityIndex] = *Components[i].Shaker;
 			ActiveShakerComponents[EntityIndex] = true;
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = Components[i].Physics;
+			PhysicsComponents[EntityIndex] = *Components[i].Physics;
 			ActivePhysicsComponents[EntityIndex] = true;
 			break;
 		}
@@ -163,25 +163,25 @@ int main() {
 	component ShakingJumper[] = {
 		(component){
 			.Type = SHAKER,
-			.Shaker = {
+			.Shaker = &(shaker_component){
 				.ShakeSpeed = 100.00
 			}
 		},
 		(component){
 			.Type = JUMPER,
-			.Jumper = {
+			.Jumper = &(jumper_component){
 				.JumpForce = 100.0,
 				.GroundHeight = 0.0
 			}
 		},
 		(component){
 			.Type = PHYSICS,
-			.Physics = {
+			.Physics = &(physics_component){
 				.Gravity = GRAVITY,
 				.Position = VEC_ZERO,
 				.Velocity = VEC_ZERO
 			}
-		},
+		}
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
