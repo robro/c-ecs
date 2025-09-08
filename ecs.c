@@ -1,4 +1,5 @@
 #include <bits/time.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
@@ -31,6 +32,12 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
+typedef enum {
+	JUMPER,
+	SHAKER,
+	PHYSICS,
+} component_type;
+
 typedef struct {
 	vec2 Position;
 	vec2 Velocity;
@@ -50,43 +57,32 @@ physics_component PhysicsComponents[MAX_ENTITIES];
 jumper_component JumperComponents[MAX_ENTITIES];
 shaker_component ShakerComponents[MAX_ENTITIES];
 
-bool PhysicsComponentsInitialized[MAX_ENTITIES];
-bool JumperComponentsInitialized[MAX_ENTITIES];
-bool ShakerComponentsInitialized[MAX_ENTITIES];
+bool ActivePhysicsComponents[MAX_ENTITIES];
+bool ActiveJumperComponents[MAX_ENTITIES];
+bool ActiveShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int new_jumper(jumper_component Jumper, physics_component Physics) {
-	JumperComponents[EntityIndex] = Jumper;
-	PhysicsComponents[EntityIndex] = Physics;
-
-	JumperComponentsInitialized[EntityIndex] = true;
-	PhysicsComponentsInitialized[EntityIndex] = true;
-
-	TotalEntities++;
-	return EntityIndex++;
-}
-
-int new_shaker(shaker_component Shaker, physics_component Physics) {
-	ShakerComponents[EntityIndex] = Shaker;
-	PhysicsComponents[EntityIndex] = Physics;
-
-	ShakerComponentsInitialized[EntityIndex] = true;
-	PhysicsComponentsInitialized[EntityIndex] = true;
-
-	TotalEntities++;
-	return EntityIndex++;
-}
-
-int new_shaking_jumper(shaker_component Shaker, jumper_component Jumper, physics_component Physics) {
-	ShakerComponents[EntityIndex] = Shaker;
-	JumperComponents[EntityIndex] = Jumper;
-	PhysicsComponents[EntityIndex] = Physics;
-
-	ShakerComponentsInitialized[EntityIndex] = true;
-	JumperComponentsInitialized[EntityIndex] = true;
-	PhysicsComponentsInitialized[EntityIndex] = true;
-
+int new_entity(component_type *ComponentTypes, size_t ComponentCount, ...) {
+	va_list Components;
+	va_start(Components, ComponentCount);
+	for (int i = 0; i < ComponentCount; ++i) {
+		switch (ComponentTypes[i]) {
+		case JUMPER:
+			JumperComponents[EntityIndex] = va_arg(Components, jumper_component);
+			ActiveJumperComponents[EntityIndex] = true;
+			break;
+		case SHAKER:
+			ShakerComponents[EntityIndex] = va_arg(Components, shaker_component);
+			ActiveShakerComponents[EntityIndex] = true;
+			break;
+		case PHYSICS:
+			PhysicsComponents[EntityIndex] = va_arg(Components, physics_component);
+			ActivePhysicsComponents[EntityIndex] = true;
+			break;
+		}
+	}
+	va_end(Components);
 	TotalEntities++;
 	return EntityIndex++;
 }
@@ -95,7 +91,7 @@ int new_shaking_jumper(shaker_component Shaker, jumper_component Jumper, physics
 
 void update_jumpers(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!JumperComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
+		if (!ActiveJumperComponents[i] || !ActivePhysicsComponents[i]) {
 			return;
 		}
 		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
@@ -107,7 +103,7 @@ void update_jumpers(float Delta) {
 
 void update_shakers(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!ShakerComponentsInitialized[i] || !PhysicsComponentsInitialized[i]) {
+		if (!ActiveShakerComponents[i] || !ActivePhysicsComponents[i]) {
 			return;
 		}
 		if (PhysicsComponents[i].Velocity.x >= 0) {
@@ -120,7 +116,7 @@ void update_shakers(float Delta) {
 
 void update_physics(float Delta) {
 	for (int i = 0; i < TotalEntities; ++i) {
-		if (!PhysicsComponentsInitialized[i]) {
+		if (!ActivePhysicsComponents[i]) {
 			return;
 		}
 		// Add gravity
@@ -161,7 +157,9 @@ float timespec_to_secs(const timespec *Time) {
 
 int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_shaking_jumper(
+		new_entity(
+			(component_type[]){SHAKER, JUMPER, PHYSICS},
+			3,
 			(shaker_component){
 				.ShakeSpeed = 100.0,
 			},
