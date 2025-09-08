@@ -53,6 +53,12 @@ typedef struct {
 	float ShakeSpeed;
 } shaker_component;
 
+typedef union {
+	physics_component Physics;
+	jumper_component Jumper;
+	shaker_component Shaker;
+} component;
+
 physics_component PhysicsComponents[MAX_ENTITIES];
 jumper_component JumperComponents[MAX_ENTITIES];
 shaker_component ShakerComponents[MAX_ENTITIES];
@@ -63,26 +69,23 @@ bool ActiveShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int new_entity(component_type *ComponentTypes, size_t ComponentCount, ...) {
-	va_list Components;
-	va_start(Components, ComponentCount);
+int new_entity(component *Components, component_type *ComponentTypes, size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
 		switch (ComponentTypes[i]) {
 		case JUMPER:
-			JumperComponents[EntityIndex] = va_arg(Components, jumper_component);
+			JumperComponents[EntityIndex] = Components[i].Jumper;
 			ActiveJumperComponents[EntityIndex] = true;
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = va_arg(Components, shaker_component);
+			ShakerComponents[EntityIndex] = Components[i].Shaker;
 			ActiveShakerComponents[EntityIndex] = true;
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = va_arg(Components, physics_component);
+			PhysicsComponents[EntityIndex] = Components[i].Physics;
 			ActivePhysicsComponents[EntityIndex] = true;
 			break;
 		}
 	}
-	va_end(Components);
 	TotalEntities++;
 	return EntityIndex++;
 }
@@ -158,20 +161,22 @@ float timespec_to_secs(const timespec *Time) {
 int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		new_entity(
+			(component[]){
+				{.Shaker = {
+					.ShakeSpeed = 100.0,
+				}},
+				{.Jumper = {
+					.JumpForce = 100.0,
+					.GroundHeight = 0.0,
+				}},
+				{.Physics = {
+					 .Position = VEC_ZERO,
+					 .Velocity = VEC_ZERO,
+					 .Gravity = GRAVITY,
+				}},
+			},
 			(component_type[]){SHAKER, JUMPER, PHYSICS},
-			3,
-			(shaker_component){
-				.ShakeSpeed = 100.0,
-			},
-			(jumper_component){
-				.JumpForce = 100.0,
-				.GroundHeight = 0.0,
-			},
-			(physics_component){
-				 .Position = VEC_ZERO,
-				 .Velocity = VEC_ZERO,
-				 .Gravity = GRAVITY,
-			}
+			3
 		);
 	}
 
