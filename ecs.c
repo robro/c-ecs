@@ -32,12 +32,6 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
-typedef enum {
-	JUMPER,
-	SHAKER,
-	PHYSICS,
-} component_type;
-
 typedef struct {
 	vec2 Position;
 	vec2 Velocity;
@@ -53,10 +47,22 @@ typedef struct {
 	float ShakeSpeed;
 } shaker_component;
 
+
+typedef enum {
+	JUMPER,
+	SHAKER,
+	PHYSICS,
+} component_type;
+
 typedef union {
 	physics_component Physics;
 	jumper_component Jumper;
 	shaker_component Shaker;
+} component_value;
+
+typedef struct {
+	component_type Type;
+	component_value Value;
 } component;
 
 physics_component PhysicsComponents[MAX_ENTITIES];
@@ -69,19 +75,19 @@ bool ActiveShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int new_entity(component *Components, component_type *ComponentTypes, size_t ComponentCount) {
+int new_entity(component Components[], size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
-		switch (ComponentTypes[i]) {
+		switch (Components[i].Type) {
 		case JUMPER:
-			JumperComponents[EntityIndex] = Components[i].Jumper;
+			JumperComponents[EntityIndex] = Components[i].Value.Jumper;
 			ActiveJumperComponents[EntityIndex] = true;
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = Components[i].Shaker;
+			ShakerComponents[EntityIndex] = Components[i].Value.Shaker;
 			ActiveShakerComponents[EntityIndex] = true;
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = Components[i].Physics;
+			PhysicsComponents[EntityIndex] = Components[i].Value.Physics;
 			ActivePhysicsComponents[EntityIndex] = true;
 			break;
 		}
@@ -159,25 +165,32 @@ float timespec_to_secs(const timespec *Time) {
 }
 
 int main() {
+	component ShakingJumper[] = {
+		(component){
+			.Type = SHAKER,
+			.Value = {.Shaker = {
+				.ShakeSpeed = 100.00
+			}}
+		},
+		(component){
+			.Type = JUMPER,
+			.Value = {.Jumper = {
+				.JumpForce = 100.0,
+				.GroundHeight = 0.0
+			}}
+		},
+		(component){
+			.Type = PHYSICS,
+			.Value = {.Physics = {
+				.Gravity = GRAVITY,
+				.Position = VEC_ZERO,
+				.Velocity = VEC_ZERO
+			}}
+		},
+	};
+
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_entity(
-			(component[]){
-				{.Shaker = {
-					.ShakeSpeed = 100.0,
-				}},
-				{.Jumper = {
-					.JumpForce = 100.0,
-					.GroundHeight = 0.0,
-				}},
-				{.Physics = {
-					 .Position = VEC_ZERO,
-					 .Velocity = VEC_ZERO,
-					 .Gravity = GRAVITY,
-				}},
-			},
-			(component_type[]){SHAKER, JUMPER, PHYSICS},
-			3
-		);
+		new_entity(ShakingJumper, ARRAY_LENGTH(ShakingJumper));
 	}
 
 	timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
