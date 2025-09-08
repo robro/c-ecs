@@ -78,6 +78,19 @@ int new_shaker(shaker_component Shaker, physics_component Physics) {
 	return EntityIndex++;
 }
 
+int new_shaking_jumper(shaker_component Shaker, jumper_component Jumper, physics_component Physics) {
+	ShakerComponents[EntityIndex] = Shaker;
+	JumperComponents[EntityIndex] = Jumper;
+	PhysicsComponents[EntityIndex] = Physics;
+
+	ShakerComponentsInitialized[EntityIndex] = true;
+	JumperComponentsInitialized[EntityIndex] = true;
+	PhysicsComponentsInitialized[EntityIndex] = true;
+
+	TotalEntities++;
+	return EntityIndex++;
+}
+
 /* ==== SYSTEMS ==================================== */
 
 void update_jumpers(float Delta) {
@@ -148,9 +161,12 @@ float timespec_to_secs(const timespec *Time) {
 
 int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_jumper(
+		new_shaking_jumper(
+			(shaker_component){
+				.ShakeSpeed = 100.0,
+			},
 			(jumper_component){
-				.JumpForce = 100,
+				.JumpForce = 100.0,
 				.GroundHeight = 0.0,
 			},
 			(physics_component){
