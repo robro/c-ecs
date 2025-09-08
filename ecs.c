@@ -47,22 +47,17 @@ typedef struct {
 	float ShakeSpeed;
 } shaker_component;
 
-
-typedef enum {
-	JUMPER,
-	SHAKER,
-	PHYSICS,
-} component_type;
-
-typedef union {
-	physics_component Physics;
-	jumper_component Jumper;
-	shaker_component Shaker;
-} component_value;
-
 typedef struct {
-	component_type Type;
-	component_value Value;
+	enum {
+		PHYSICS,
+		JUMPER,
+		SHAKER,
+	} Type;
+	union {
+		physics_component Physics;
+		jumper_component Jumper;
+		shaker_component Shaker;
+	};
 } component;
 
 physics_component PhysicsComponents[MAX_ENTITIES];
@@ -79,15 +74,15 @@ int new_entity(component Components[], size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
 		switch (Components[i].Type) {
 		case JUMPER:
-			JumperComponents[EntityIndex] = Components[i].Value.Jumper;
+			JumperComponents[EntityIndex] = Components[i].Jumper;
 			ActiveJumperComponents[EntityIndex] = true;
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = Components[i].Value.Shaker;
+			ShakerComponents[EntityIndex] = Components[i].Shaker;
 			ActiveShakerComponents[EntityIndex] = true;
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = Components[i].Value.Physics;
+			PhysicsComponents[EntityIndex] = Components[i].Physics;
 			ActivePhysicsComponents[EntityIndex] = true;
 			break;
 		}
@@ -168,24 +163,24 @@ int main() {
 	component ShakingJumper[] = {
 		(component){
 			.Type = SHAKER,
-			.Value = {.Shaker = {
+			.Shaker = {
 				.ShakeSpeed = 100.00
-			}}
+			}
 		},
 		(component){
 			.Type = JUMPER,
-			.Value = {.Jumper = {
+			.Jumper = {
 				.JumpForce = 100.0,
 				.GroundHeight = 0.0
-			}}
+			}
 		},
 		(component){
 			.Type = PHYSICS,
-			.Value = {.Physics = {
+			.Physics = {
 				.Gravity = GRAVITY,
 				.Position = VEC_ZERO,
 				.Velocity = VEC_ZERO
-			}}
+			}
 		},
 	};
 
