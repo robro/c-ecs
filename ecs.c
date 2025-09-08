@@ -54,9 +54,9 @@ typedef struct {
 		SHAKER,
 	} Type;
 	union {
-		physics_component *Physics;
-		jumper_component *Jumper;
-		shaker_component *Shaker;
+		physics_component Physics;
+		jumper_component Jumper;
+		shaker_component Shaker;
 	};
 } component;
 
@@ -70,19 +70,19 @@ bool ActiveShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-int new_entity(component Components[], size_t ComponentCount) {
+int new_entity(component *Components[], size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
-		switch (Components[i].Type) {
+		switch (Components[i]->Type) {
 		case JUMPER:
-			JumperComponents[EntityIndex] = *Components[i].Jumper;
+			JumperComponents[EntityIndex] = Components[i]->Jumper;
 			ActiveJumperComponents[EntityIndex] = true;
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = *Components[i].Shaker;
+			ShakerComponents[EntityIndex] = Components[i]->Shaker;
 			ActiveShakerComponents[EntityIndex] = true;
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = *Components[i].Physics;
+			PhysicsComponents[EntityIndex] = Components[i]->Physics;
 			ActivePhysicsComponents[EntityIndex] = true;
 			break;
 		}
@@ -160,23 +160,23 @@ float timespec_to_secs(const timespec *Time) {
 }
 
 int main() {
-	component ShakingJumper[] = {
-		(component){
+	component *Components[] = {
+		&(component){
 			.Type = SHAKER,
-			.Shaker = &(shaker_component){
+			.Shaker = {
 				.ShakeSpeed = 100.00
 			}
 		},
-		(component){
+		&(component){
 			.Type = JUMPER,
-			.Jumper = &(jumper_component){
+			.Jumper = {
 				.JumpForce = 100.0,
 				.GroundHeight = 0.0
 			}
 		},
-		(component){
+		&(component){
 			.Type = PHYSICS,
-			.Physics = &(physics_component){
+			.Physics = {
 				.Gravity = GRAVITY,
 				.Position = VEC_ZERO,
 				.Velocity = VEC_ZERO
@@ -185,7 +185,7 @@ int main() {
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_entity(ShakingJumper, ARRAY_LENGTH(ShakingJumper));
+		new_entity(Components, ARRAY_LENGTH(Components));
 	}
 
 	timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
