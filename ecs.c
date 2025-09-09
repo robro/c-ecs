@@ -80,24 +80,33 @@ typedef struct {
 } Component;
 
 Component component_physics_get(Vec2 position, Vec2 velocity, Vec2 gravity) {
-	return (Component){.type = PHYSICS, .data.physics = {
-		position,
-		velocity,
-		gravity
-	}};
+	return (Component){
+		.type = PHYSICS,
+		.data.physics = {
+			.position = position,
+			.velocity = velocity,
+			.gravity = gravity
+		}
+	};
 }
 
 Component component_jumper_get(float jump_force, float ground_height) {
-	return (Component){.type = JUMPER, .data.jumper = {
-		jump_force,
-		ground_height
-	}};
+	return (Component){
+		.type = JUMPER,
+		.data.jumper = {
+			.jump_force = jump_force,
+			.ground_height = ground_height
+		}
+	};
 }
 
 Component component_shaker_get(float shake_speed) {
-	return (Component){.type = SHAKER, .data.shaker = {
-		shake_speed
-	}};
+	return (Component){
+		.type = SHAKER,
+		.data.shaker = {
+			.shake_speed = shake_speed
+		}
+	};
 }
 
 Component components_physics[MAX_ENTITIES] = {};
