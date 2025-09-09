@@ -19,8 +19,21 @@
 
 typedef struct timespec timespec;
 
-uint EntityIndex = 0;
-uint TotalEntities = 0;
+timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
+	timespec diff = {
+		.tv_sec = TimeA->tv_sec - TimeB->tv_sec,
+		.tv_nsec = TimeA->tv_nsec - TimeB->tv_nsec,
+	};
+	if (diff.tv_nsec < 0) {
+		diff.tv_nsec += NSECS_IN_SEC;
+		diff.tv_sec--;
+	}
+	return diff;
+}
+
+float timespec_to_secs(const timespec *Time) {
+	return Time->tv_sec + (float)Time->tv_nsec / NSECS_IN_SEC;
+}
 
 typedef struct {
 	float x;
@@ -69,6 +82,9 @@ bool ActiveJumperComponents[MAX_ENTITIES];
 bool ActiveShakerComponents[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
+
+uint EntityIndex = 0;
+uint TotalEntities = 0;
 
 int new_entity(component *Components[], size_t ComponentCount) {
 	for (int i = 0; i < ComponentCount; ++i) {
@@ -142,22 +158,6 @@ const update_func UpdateFuncs[] = {
 	update_physics,
 };
 const size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
-
-timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
-	timespec diff = {
-		.tv_sec = TimeA->tv_sec - TimeB->tv_sec,
-		.tv_nsec = TimeA->tv_nsec - TimeB->tv_nsec,
-	};
-	if (diff.tv_nsec < 0) {
-		diff.tv_nsec += NSECS_IN_SEC;
-		diff.tv_sec--;
-	}
-	return diff;
-}
-
-float timespec_to_secs(const timespec *Time) {
-	return Time->tv_sec + (float)Time->tv_nsec / NSECS_IN_SEC;
-}
 
 int main() {
 	component *Components[] = {
