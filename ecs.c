@@ -15,14 +15,14 @@
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
 #define NSECS_IN_SEC 1000000000
 
-#define ARRAY_LENGTH(arr) (sizeof(arr) / sizeof(arr[0]))
+#define array_length(arr) (sizeof(arr) / sizeof(arr[0]))
 
 typedef struct timespec timespec;
 
-timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
+timespec diff_timespec(const timespec *time_a, const timespec *time_b) {
 	timespec diff = {
-		.tv_sec = TimeA->tv_sec - TimeB->tv_sec,
-		.tv_nsec = TimeA->tv_nsec - TimeB->tv_nsec,
+		.tv_sec = time_a->tv_sec - time_b->tv_sec,
+		.tv_nsec = time_a->tv_nsec - time_b->tv_nsec,
 	};
 	if (diff.tv_nsec < 0) {
 		diff.tv_nsec += NSECS_IN_SEC;
@@ -31,187 +31,181 @@ timespec diff_timespec(const timespec *TimeA, const timespec *TimeB) {
 	return diff;
 }
 
-float timespec_to_secs(const timespec *Time) {
-	return Time->tv_sec + (float)Time->tv_nsec / NSECS_IN_SEC;
+float timespec_to_secs(const timespec *time) {
+	return time->tv_sec + (float)time->tv_nsec / NSECS_IN_SEC;
 }
 
 typedef struct {
 	float x;
 	float y;
-} vec2;
+} Vec2;
 
-#define VEC_ZERO (vec2){0, 0}
-#define GRAVITY (vec2){0, 9.8}
+#define VEC_ZERO (Vec2){0, 0}
+#define GRAVITY (Vec2){0, 9.8}
 
 /* ==== COMPONENTS ================================== */
 
-typedef struct {
-	vec2 Position;
-	vec2 Velocity;
-	vec2 Gravity;
-} physics_component;
+struct component_physics {
+	Vec2 position;
+	Vec2 velocity;
+	Vec2 gravity;
+};
 
-typedef struct {
-	float JumpForce;
-	float GroundHeight;
-} jumper_component;
+struct component_jumper {
+	float jump_force;
+	float ground_height;
+};
 
-typedef struct {
-	float ShakeSpeed;
-} shaker_component;
+struct component_shaker {
+	float shake_speed;
+};
 
 typedef struct {
 	enum {
+		NONE,
 		PHYSICS,
 		JUMPER,
 		SHAKER,
-	} Type;
+	} type;
 	union {
-		physics_component Physics;
-		jumper_component Jumper;
-		shaker_component Shaker;
+		struct component_physics physics;
+		struct component_jumper jumper;
+		struct component_shaker shaker;
 	};
-} component;
+} Component;
 
-physics_component PhysicsComponents[MAX_ENTITIES];
-jumper_component JumperComponents[MAX_ENTITIES];
-shaker_component ShakerComponents[MAX_ENTITIES];
-
-bool ActivePhysicsComponents[MAX_ENTITIES];
-bool ActiveJumperComponents[MAX_ENTITIES];
-bool ActiveShakerComponents[MAX_ENTITIES];
+Component components_physics[MAX_ENTITIES];
+Component components_jumpers[MAX_ENTITIES];
+Component components_shakers[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-uint EntityIndex = 0;
-uint TotalEntities = 0;
+uint entity_index = 0;
+uint total_entities = 0;
 
-int new_entity(component *Components[], size_t ComponentCount) {
-	for (int i = 0; i < ComponentCount; ++i) {
-		switch (Components[i]->Type) {
+int new_entity(Component *components[], size_t component_count) {
+	for (int i = 0; i < component_count; ++i) {
+		switch (components[i]->type) {
+		case NONE:
+			return -1;
 		case JUMPER:
-			JumperComponents[EntityIndex] = Components[i]->Jumper;
-			ActiveJumperComponents[EntityIndex] = true;
+			components_jumpers[entity_index] = *components[i];
 			break;
 		case SHAKER:
-			ShakerComponents[EntityIndex] = Components[i]->Shaker;
-			ActiveShakerComponents[EntityIndex] = true;
+			components_shakers[entity_index] = *components[i];
 			break;
 		case PHYSICS:
-			PhysicsComponents[EntityIndex] = Components[i]->Physics;
-			ActivePhysicsComponents[EntityIndex] = true;
+			components_physics[entity_index] = *components[i];
 			break;
 		}
 	}
-	TotalEntities++;
-	return EntityIndex++;
+	total_entities++;
+	return entity_index++;
 }
 
 /* ==== SYSTEMS ==================================== */
 
-void update_jumpers(float Delta) {
-	for (int i = 0; i < TotalEntities; ++i) {
-		if (!ActiveJumperComponents[i] || !ActivePhysicsComponents[i]) {
+void update_jumpers(float delta) {
+	for (int i = 0; i < total_entities; ++i) {
+		if (components_jumpers[i].type != JUMPER || components_physics[i].type != PHYSICS) {
 			return;
 		}
-		if (PhysicsComponents[i].Position.y >= JumperComponents[i].GroundHeight) {
-			PhysicsComponents[i].Position.y = JumperComponents[i].GroundHeight;
-			PhysicsComponents[i].Velocity.y = -JumperComponents[i].JumpForce;
+		if (components_physics[i].physics.position.y >= components_jumpers[i].jumper.ground_height) {
+			components_physics[i].physics.position.y = components_jumpers[i].jumper.ground_height;
+			components_physics[i].physics.velocity.y = -components_jumpers[i].jumper.jump_force;
 		}
 	}
 }
 
-void update_shakers(float Delta) {
-	for (int i = 0; i < TotalEntities; ++i) {
-		if (!ActiveShakerComponents[i] || !ActivePhysicsComponents[i]) {
+void update_shakers(float delta) {
+	for (int i = 0; i < total_entities; ++i) {
+		if (components_shakers[i].type != SHAKER || components_physics[i].type != PHYSICS) {
 			return;
 		}
-		if (PhysicsComponents[i].Velocity.x >= 0) {
-			PhysicsComponents[i].Velocity.x = -ShakerComponents[i].ShakeSpeed;
+		if (components_physics[i].physics.velocity.x >= 0) {
+			components_physics[i].physics.velocity.x = -components_shakers[i].shaker.shake_speed;
 		} else {
-			PhysicsComponents[i].Velocity.x = ShakerComponents[i].ShakeSpeed;
+			components_physics[i].physics.velocity.x = components_shakers[i].shaker.shake_speed;
 		}
 	}
 }
 
-void update_physics(float Delta) {
-	for (int i = 0; i < TotalEntities; ++i) {
-		if (!ActivePhysicsComponents[i]) {
+void update_physics(float delta) {
+	for (int i = 0; i < total_entities; ++i) {
+		if (components_physics[i].type != PHYSICS) {
 			return;
 		}
 		// Add gravity
-		PhysicsComponents[i].Velocity.x += PhysicsComponents[i].Gravity.x * Delta;
-		PhysicsComponents[i].Velocity.y += PhysicsComponents[i].Gravity.y * Delta;
+		components_physics[i].physics.velocity.x += components_physics[i].physics.gravity.x * delta;
+		components_physics[i].physics.velocity.y += components_physics[i].physics.gravity.y * delta;
 
 		// Update position
-		PhysicsComponents[i].Position.x += PhysicsComponents[i].Velocity.x * Delta;
-		PhysicsComponents[i].Position.y += PhysicsComponents[i].Velocity.y * Delta;
-
-		// printf("Pos(%f, %f)\n", PhysicsComponents[i].Position.x, PhysicsComponents[i].Position.y);
+		components_physics[i].physics.position.x += components_physics[i].physics.velocity.x * delta;
+		components_physics[i].physics.position.y += components_physics[i].physics.velocity.y * delta;
 	}
 }
 
-typedef void (*update_func)(float);
-const update_func UpdateFuncs[] = {
+typedef void (*UpdateFunc)(float);
+const UpdateFunc update_funcs[] = {
 	update_jumpers,
 	update_shakers,
 	update_physics,
 };
-const size_t UpdateFuncsCount = ARRAY_LENGTH(UpdateFuncs);
+const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	component *Components[] = {
-		&(component){
-			.Type = SHAKER,
-			.Shaker = {
-				.ShakeSpeed = 100.00
+	Component *components[] = {
+		&(Component){
+			.type = SHAKER,
+			.shaker = {
+				.shake_speed = 100.00
 			}
 		},
-		&(component){
-			.Type = JUMPER,
-			.Jumper = {
-				.JumpForce = 100.0,
-				.GroundHeight = 0.0
+		&(Component){
+			.type = JUMPER,
+			.jumper = {
+				.jump_force = 100.0,
+				.ground_height = 0.0
 			}
 		},
-		&(component){
-			.Type = PHYSICS,
-			.Physics = {
-				.Gravity = GRAVITY,
-				.Position = VEC_ZERO,
-				.Velocity = VEC_ZERO
+		&(Component){
+			.type = PHYSICS,
+			.physics = {
+				.gravity = GRAVITY,
+				.position = VEC_ZERO,
+				.velocity = VEC_ZERO
 			}
 		}
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_entity(Components, ARRAY_LENGTH(Components));
+		new_entity(components, array_length(components));
 	}
 
-	timespec TimeStart, TimeEnd, SleepTime, WorkTime, FrameTime;
-	const timespec TargetFrameTime = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	timespec time_start, time_end, sleep_time, work_time, frame_time;
+	const timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
 
 	printf("Starting test...\n");
 
 	// Game Loop
 	for (int i = 0; i < 10; ++i) {
-		clock_gettime(CLOCK_MONOTONIC, &TimeStart);
-		for (int j = 0; j < UpdateFuncsCount; ++j) {
-			UpdateFuncs[j](SECS_PER_FRAME);
+		clock_gettime(CLOCK_MONOTONIC, &time_start);
+		for (int j = 0; j < update_funcs_count; ++j) {
+			update_funcs[j](SECS_PER_FRAME);
 		}
-		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
-		WorkTime = diff_timespec(&TimeEnd, &TimeStart);
-		SleepTime = diff_timespec(&TargetFrameTime, &WorkTime);
-		if (SleepTime.tv_sec >= 0 && SleepTime.tv_nsec > 0) {
-			nanosleep(&SleepTime, NULL);
+		clock_gettime(CLOCK_MONOTONIC, &time_end);
+		work_time = diff_timespec(&time_end, &time_start);
+		sleep_time = diff_timespec(&target_frame_time, &work_time);
+		if (sleep_time.tv_sec >= 0 && sleep_time.tv_nsec > 0) {
+			nanosleep(&sleep_time, NULL);
 		}
 #if DEBUG_BUILD
-		clock_gettime(CLOCK_MONOTONIC, &TimeEnd);
-		FrameTime = diff_timespec(&TimeEnd, &TimeStart);
+		clock_gettime(CLOCK_MONOTONIC, &time_end);
+		frame_time = diff_timespec(&time_end, &time_start);
 		printf(
 			"Work time: %lf secs | Frame time: %lf secs\n",
-			timespec_to_secs(&WorkTime),
-			timespec_to_secs(&FrameTime)
+			timespec_to_secs(&work_time),
+			timespec_to_secs(&frame_time)
 		);
 #endif
 	}
