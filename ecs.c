@@ -45,20 +45,20 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
-struct component_physics {
+typedef struct {
 	Vec2 position;
 	Vec2 velocity;
 	Vec2 gravity;
-};
+} ComponentDataPhysics;
 
-struct component_jumper {
+typedef struct {
 	float jump_force;
 	float ground_height;
-};
+} ComponentDataJumper;
 
-struct component_shaker {
+typedef struct {
 	float shake_speed;
-};
+} ComponentDataShaker;
 
 typedef struct {
 	enum {
@@ -68,11 +68,23 @@ typedef struct {
 		SHAKER,
 	} type;
 	union {
-		struct component_physics physics;
-		struct component_jumper jumper;
-		struct component_shaker shaker;
+		ComponentDataPhysics physics;
+		ComponentDataJumper jumper;
+		ComponentDataShaker shaker;
 	};
 } Component;
+
+Component get_component_physics(const ComponentDataPhysics *data) {
+	return (Component){.type = PHYSICS, .physics = *data};
+}
+
+Component get_component_jumper(const ComponentDataJumper *data) {
+	return (Component){.type = JUMPER, .jumper = *data};
+}
+
+Component get_component_shaker(const ComponentDataShaker *data) {
+	return (Component){.type = SHAKER, .shaker = *data};
+}
 
 Component components_physics[MAX_ENTITIES];
 Component components_jumpers[MAX_ENTITIES];
@@ -83,19 +95,19 @@ Component components_shakers[MAX_ENTITIES];
 uint entity_index = 0;
 uint total_entities = 0;
 
-int new_entity(Component *components[], size_t component_count) {
+int entity_create(Component components[], size_t component_count) {
 	for (int i = 0; i < component_count; ++i) {
-		switch (components[i]->type) {
+		switch (components[i].type) {
 		case NONE:
 			return -1;
 		case JUMPER:
-			components_jumpers[entity_index] = *components[i];
+			components_jumpers[entity_index] = components[i];
 			break;
 		case SHAKER:
-			components_shakers[entity_index] = *components[i];
+			components_shakers[entity_index] = components[i];
 			break;
 		case PHYSICS:
-			components_physics[entity_index] = *components[i];
+			components_physics[entity_index] = components[i];
 			break;
 		}
 	}
@@ -154,38 +166,27 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	Component *components[] = {
-		&(Component){
-			.type = SHAKER,
-			.shaker = {
-				.shake_speed = 100.00
-			}
-		},
-		&(Component){
-			.type = JUMPER,
-			.jumper = {
-				.jump_force = 100.0,
-				.ground_height = 0.0
-			}
-		},
-		&(Component){
-			.type = PHYSICS,
-			.physics = {
-				.gravity = GRAVITY,
-				.position = VEC_ZERO,
-				.velocity = VEC_ZERO
-			}
-		}
+	Component components[] = {
+		get_component_shaker(&(ComponentDataShaker){
+			.shake_speed = 100.0
+		}),
+		get_component_jumper(&(ComponentDataJumper){
+			.jump_force = 100.0,
+			.ground_height = 0.0
+		}),
+		get_component_physics(&(ComponentDataPhysics){
+			.gravity = GRAVITY,
+			.position = VEC_ZERO,
+			.velocity = VEC_ZERO
+		})
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		new_entity(components, array_length(components));
+		entity_create(components, array_length(components));
 	}
 
 	timespec time_start, time_end, sleep_time, work_time, frame_time;
 	const timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
-
-	printf("Starting test...\n");
 
 	// Game Loop
 	for (int i = 0; i < 10; ++i) {
