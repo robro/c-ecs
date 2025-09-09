@@ -62,57 +62,97 @@ typedef struct {
 	Vec2 position;
 	Vec2 velocity;
 	Vec2 gravity;
-} ComponentPhysicsData;
+} ComponentDataPhysics;
 
 typedef struct {
 	float jump_force;
 	float ground_height;
-} ComponentJumperData;
+} ComponentDataJumper;
 
 typedef struct {
 	float shake_speed;
-} ComponentShakerData;
+} ComponentDataShaker;
 
 typedef struct {
 	ComponentHeader header;
-	ComponentPhysicsData data;
+	ComponentDataPhysics data;
 } ComponentPhysics;
 
 typedef struct {
 	ComponentHeader header;
-	ComponentJumperData data;
+	ComponentDataJumper data;
 } ComponentJumper;
 
 typedef struct {
 	ComponentHeader header;
-	ComponentShakerData data;
+	ComponentDataShaker data;
 } ComponentShaker;
+
+typedef ComponentHeader Component;
 
 ComponentPhysics component_physics[MAX_ENTITIES] = {};
 ComponentJumper component_jumpers[MAX_ENTITIES] = {};
 ComponentShaker component_shakers[MAX_ENTITIES] = {};
+
+ComponentPhysics component_physics_create(Vec2 position, Vec2 velocity, Vec2 gravity) {
+	return (ComponentPhysics){
+		.header = {.type = CT_PHYSICS, .active = true},
+		.data = (ComponentDataPhysics){
+			.position = position,
+			.velocity = velocity,
+			.gravity = gravity
+		}
+	};
+}
+
+ComponentJumper component_jumper_create(float jump_force, float ground_height) {
+	return (ComponentJumper){
+		.header = {.type = CT_JUMPER, .active = true},
+		.data = (ComponentDataJumper){
+			.jump_force = jump_force,
+			.ground_height = ground_height
+		}
+	};
+}
+
+ComponentShaker component_shaker_create(float shake_speed) {
+	return (ComponentShaker){
+		.header = {.type = CT_SHAKER, .active = true},
+		.data = (ComponentDataShaker){
+			.shake_speed = shake_speed
+		},
+	};
+}
 
 /* ==== ENTITIES ==================================== */
 
 uint entity_index = 0;
 uint total_entities = 0;
 
-int entity_create(ComponentHeader *components[], size_t component_count) {
+/*
+ * Create entity from list of components.
+ * Returns entity index or -1 if failed.
+ */
+int entity_create(uint component_count, ...) {
+	va_list components;
+	va_start(components, component_count);
 	for (int i = 0; i < component_count; ++i) {
-		switch (components[i]->type) {
+		Component *component = va_arg(components, Component *);
+		switch (component->type) {
 		case CT_NONE:
 			return -1;
 		case CT_PHYSICS:
-			component_physics[entity_index] = *(ComponentPhysics *)components[i];
+			component_physics[entity_index] = *(ComponentPhysics *)component;
 			break;
 		case CT_JUMPER:
-			component_jumpers[entity_index] = *(ComponentJumper *)components[i];
+			component_jumpers[entity_index] = *(ComponentJumper *)component;
 			break;
 		case CT_SHAKER:
-			component_shakers[entity_index] = *(ComponentShaker *)components[i];
+			component_shakers[entity_index] = *(ComponentShaker *)component;
 			break;
 		}
 	}
+	va_end(components);
 	total_entities++;
 	return entity_index++;
 }
@@ -168,14 +208,12 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	ComponentHeader *components[] = {
-		(ComponentHeader *)&(ComponentShaker){.header = {.type = CT_SHAKER, .active = true}, .data = {.shake_speed = 100.0}},
-		(ComponentHeader *)&(ComponentJumper){.header = {.type = CT_JUMPER, .active = true}, .data = {.jump_force = 100.0, .ground_height = 0.0}},
-		(ComponentHeader *)&(ComponentPhysics){.header = {.type = CT_PHYSICS, .active = true}, .data = {.position = VEC_ZERO, .velocity = VEC_ZERO, .gravity = GRAVITY}},
-	};
+	ComponentPhysics physics = component_physics_create(VEC_ZERO, VEC_ZERO, GRAVITY);
+	ComponentJumper jumper = component_jumper_create(100.0, 0.0);
+	ComponentShaker shaker = component_shaker_create(100.0);
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(components, array_length(components));
+		entity_create(3, &physics, &jumper, &shaker);
 	}
 
 	timespec time_start, time_end, sleep_time, work_time, frame_time;
