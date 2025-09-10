@@ -1,5 +1,4 @@
 #include <bits/time.h>
-#include <stdarg.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
@@ -46,156 +45,107 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
-typedef enum {
-	CT_NONE,
-	CT_PHYSICS,
-	CT_JUMPER,
-	CT_SHAKER,
-} ComponentType;
-
-typedef struct {
-	ComponentType type;
-	bool active;
-} ComponentHeader;
-
 typedef struct {
 	Vec2 position;
 	Vec2 velocity;
 	Vec2 gravity;
-} ComponentDataPhysics;
+} ComponentPhysics;
 
 typedef struct {
 	float jump_force;
 	float ground_height;
-} ComponentDataJumper;
-
-typedef struct {
-	float shake_speed;
-} ComponentDataShaker;
-
-typedef struct {
-	ComponentHeader header;
-	ComponentDataPhysics data;
-} ComponentPhysics;
-
-typedef struct {
-	ComponentHeader header;
-	ComponentDataJumper data;
 } ComponentJumper;
 
 typedef struct {
-	ComponentHeader header;
-	ComponentDataShaker data;
+	float shake_speed;
 } ComponentShaker;
-
-typedef ComponentHeader Component;
 
 ComponentPhysics component_physics[MAX_ENTITIES] = {};
 ComponentJumper component_jumpers[MAX_ENTITIES] = {};
 ComponentShaker component_shakers[MAX_ENTITIES] = {};
 
-ComponentPhysics component_physics_create(Vec2 position, Vec2 velocity, Vec2 gravity) {
-	return (ComponentPhysics){
-		.header = {.type = CT_PHYSICS, .active = true},
-		.data = (ComponentDataPhysics){
-			.position = position,
-			.velocity = velocity,
-			.gravity = gravity
-		}
-	};
+void component_physics_set(uint entity_index, ComponentPhysics *data) {
+	component_physics[entity_index] = *data;
 }
 
-ComponentJumper component_jumper_create(float jump_force, float ground_height) {
-	return (ComponentJumper){
-		.header = {.type = CT_JUMPER, .active = true},
-		.data = (ComponentDataJumper){
-			.jump_force = jump_force,
-			.ground_height = ground_height
-		}
-	};
+void component_jumper_set(uint entity_index, ComponentJumper *data) {
+	component_jumpers[entity_index] = *data;
 }
 
-ComponentShaker component_shaker_create(float shake_speed) {
-	return (ComponentShaker){
-		.header = {.type = CT_SHAKER, .active = true},
-		.data = (ComponentDataShaker){
-			.shake_speed = shake_speed
-		},
-	};
+void component_shaker_set(uint entity_index, ComponentShaker *data) {
+	component_shakers[entity_index] = *data;
 }
 
 /* ==== ENTITIES ==================================== */
 
-uint entity_index = 0;
-uint total_entities = 0;
+uint last_entity_index = 0;
+bool active_entities[MAX_ENTITIES] = {};
 
-/*
- * Create entity from list of components.
- * Returns entity index or -1 if failed.
- */
-int entity_create(uint component_count, ...) {
-	va_list components;
-	va_start(components, component_count);
-	for (int i = 0; i < component_count; ++i) {
-		Component *component = va_arg(components, Component *);
-		switch (component->type) {
-		case CT_NONE:
+int entity_index_get() {
+	int i = last_entity_index;
+	while (active_entities[i]) {
+		i++;
+		i %= MAX_ENTITIES;
+		if (i == last_entity_index) {
 			return -1;
-		case CT_PHYSICS:
-			component_physics[entity_index] = *(ComponentPhysics *)component;
-			break;
-		case CT_JUMPER:
-			component_jumpers[entity_index] = *(ComponentJumper *)component;
-			break;
-		case CT_SHAKER:
-			component_shakers[entity_index] = *(ComponentShaker *)component;
-			break;
 		}
 	}
-	va_end(components);
-	total_entities++;
-	return entity_index++;
+	last_entity_index = i;
+	return last_entity_index;
+}
+
+bool entity_index_valid(uint entity_index) {
+	if (entity_index >= MAX_ENTITIES) {
+		return false;
+	}
+	return true;
+}
+
+void entity_activate(uint entity_index) {
+	if (entity_index_valid(entity_index)) {
+		active_entities[entity_index] = true;
+	}
 }
 
 /* ==== SYSTEMS ==================================== */
 
 void update_jumpers(float delta) {
-	for (int i = 0; i < total_entities; ++i) {
-		if (!component_jumpers[i].header.active || !component_physics[i].header.active) {
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		if (!active_entities[i]) {
 			return;
 		}
-		if (component_physics[i].data.position.y >= component_jumpers[i].data.ground_height) {
-			component_physics[i].data.position.y = component_jumpers[i].data.ground_height;
-			component_physics[i].data.velocity.y = -component_jumpers[i].data.jump_force;
+		if (component_physics[i].position.y >= component_jumpers[i].ground_height) {
+			component_physics[i].position.y = component_jumpers[i].ground_height;
+			component_physics[i].velocity.y = -component_jumpers[i].jump_force;
 		}
 	}
 }
 
 void update_shakers(float delta) {
-	for (int i = 0; i < total_entities; ++i) {
-		if (!component_shakers[i].header.active || !component_physics[i].header.active) {
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		if (!active_entities[i]) {
 			return;
 		}
-		if (component_physics[i].data.velocity.x >= 0) {
-			component_physics[i].data.velocity.x = -component_shakers[i].data.shake_speed;
+		if (component_physics[i].velocity.x >= 0) {
+			component_physics[i].velocity.x = -component_shakers[i].shake_speed;
 		} else {
-			component_physics[i].data.velocity.x = component_shakers[i].data.shake_speed;
+			component_physics[i].velocity.x = component_shakers[i].shake_speed;
 		}
 	}
 }
 
 void update_physics(float delta) {
-	for (int i = 0; i < total_entities; ++i) {
-		if (!component_physics[i].header.active) {
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		if (!active_entities[i]) {
 			return;
 		}
 		// Add gravity
-		component_physics[i].data.velocity.x += component_physics[i].data.gravity.x * delta;
-		component_physics[i].data.velocity.y += component_physics[i].data.gravity.y * delta;
+		component_physics[i].velocity.x += component_physics[i].gravity.x * delta;
+		component_physics[i].velocity.y += component_physics[i].gravity.y * delta;
 
 		// Update position
-		component_physics[i].data.position.x += component_physics[i].data.velocity.x * delta;
-		component_physics[i].data.position.y += component_physics[i].data.velocity.y * delta;
+		component_physics[i].position.x += component_physics[i].velocity.x * delta;
+		component_physics[i].position.y += component_physics[i].velocity.y * delta;
 	}
 }
 
@@ -208,12 +158,25 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	ComponentPhysics physics = component_physics_create(VEC_ZERO, VEC_ZERO, GRAVITY);
-	ComponentJumper jumper = component_jumper_create(100.0, 0.0);
-	ComponentShaker shaker = component_shaker_create(100.0);
-
+	int entity_index;
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(3, &physics, &jumper, &shaker);
+		entity_index = entity_index_get();
+		if (entity_index < 0) {
+			continue;
+		}
+		component_jumper_set(entity_index, &(ComponentJumper){
+			.jump_force = 100.0,
+			.ground_height = 0.0
+		});
+		component_shaker_set(entity_index, &(ComponentShaker){
+			.shake_speed = 100.0
+		});
+		component_physics_set(entity_index, &(ComponentPhysics){
+			.position = VEC_ZERO,
+			.velocity = VEC_ZERO,
+			.gravity = GRAVITY
+		});
+		entity_activate(entity_index);
 	}
 
 	timespec time_start, time_end, sleep_time, work_time, frame_time;
