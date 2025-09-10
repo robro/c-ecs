@@ -64,16 +64,24 @@ ComponentPhysics component_physics[MAX_ENTITIES] = {};
 ComponentJumper component_jumpers[MAX_ENTITIES] = {};
 ComponentShaker component_shakers[MAX_ENTITIES] = {};
 
+bool entity_index_valid(uint entity_index);
+
 void component_physics_set(uint entity_index, ComponentPhysics *data) {
-	component_physics[entity_index] = *data;
+	if (entity_index_valid(entity_index)) {
+		component_physics[entity_index] = *data;
+	}
 }
 
 void component_jumper_set(uint entity_index, ComponentJumper *data) {
-	component_jumpers[entity_index] = *data;
+	if (entity_index_valid(entity_index)) {
+		component_jumpers[entity_index] = *data;
+	}
 }
 
 void component_shaker_set(uint entity_index, ComponentShaker *data) {
-	component_shakers[entity_index] = *data;
+	if (entity_index_valid(entity_index)) {
+		component_shakers[entity_index] = *data;
+	}
 }
 
 /* ==== ENTITIES ==================================== */
