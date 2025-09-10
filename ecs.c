@@ -123,12 +123,16 @@ void entity_set_alive(uint entity_index) {
 	}
 }
 
-int entity_create(const Component **components, uint component_count) {
+/*
+ * Takes NULL terminated array of Component pointers.
+ * Returns entity index or -1 if no free indices.
+ */
+int entity_create(const Component **components) {
 	int entity_index = entity_index_get_free();
 	if (entity_index < 0) {
 		return -1;
 	}
-	for (int i = 0; i < component_count; ++i) {
+	for (int i = 0; components[i]; ++i) {
 		switch (components[i]->type) {
 		case CT_PHYSICS:
 			component_physics[entity_index] = *(ComponentPhysics *)components[i];
@@ -196,31 +200,42 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	const ComponentPhysics physics = (ComponentPhysics){
-		.header = {.type = CT_PHYSICS, .active = true},
-		.data = {
-			.position = VEC_ZERO,
-			.velocity = VEC_ZERO,
-			.gravity = GRAVITY
-		}
+	const Component *test_entity[] = {
+		(Component *)&(ComponentPhysics){
+			.header = {
+				.type = CT_PHYSICS,
+				.active = true
+			},
+			.data = {
+				.position = VEC_ZERO,
+				.velocity = VEC_ZERO,
+				.gravity = GRAVITY
+			}
+		},
+		(Component *)&(ComponentJumper){
+			.header = {
+				.type = CT_JUMPER,
+				.active = true
+			},
+			.data = {
+				.jump_force = 100.0,
+				.ground_height = 0.0
+			}
+		},
+		(Component *)&(ComponentShaker){
+			.header = {
+				.type = CT_SHAKER,
+				.active = true
+			},
+			.data = {
+				.shake_speed = 100.0
+			}
+		},
+		NULL
 	};
-	const ComponentJumper jumper = (ComponentJumper){
-		.header = {.type = CT_JUMPER, .active = true},
-		.data = {
-			.jump_force = 100.0,
-			.ground_height = 0.0
-		}
-	};
-	const ComponentShaker shaker = (ComponentShaker){
-		.header = {.type = CT_SHAKER, .active = true},
-		.data = {
-			.shake_speed = 100.0
-		}
-	};
-	const Component *entity_components[] = {(Component *)&physics, (Component *)&jumper, (Component *)&shaker};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(entity_components, array_length(entity_components));
+		entity_create(test_entity);
 	}
 
 	timespec time_start, time_end, sleep_time, work_time, frame_time;
