@@ -45,115 +45,145 @@ typedef struct {
 
 /* ==== COMPONENTS ================================== */
 
+typedef enum {
+	CT_PHYSICS,
+	CT_JUMPER,
+	CT_SHAKER,
+} ComponentType;
+
+typedef struct {
+	ComponentType type;
+	bool active;
+} ComponentHeader;
+
 typedef struct {
 	Vec2 position;
 	Vec2 velocity;
 	Vec2 gravity;
-} ComponentPhysics;
+} ComponentPhysicsData;
 
 typedef struct {
 	float jump_force;
 	float ground_height;
-} ComponentJumper;
+} ComponentJumperData;
 
 typedef struct {
 	float shake_speed;
+} ComponentShakerData;
+
+typedef struct {
+	ComponentHeader header;
+	ComponentPhysicsData data;
+} ComponentPhysics;
+
+typedef struct {
+	ComponentHeader header;
+	ComponentJumperData data;
+} ComponentJumper;
+
+typedef struct {
+	ComponentHeader header;
+	ComponentShakerData data;
 } ComponentShaker;
 
-ComponentPhysics component_physics[MAX_ENTITIES] = {};
-ComponentJumper component_jumpers[MAX_ENTITIES] = {};
-ComponentShaker component_shakers[MAX_ENTITIES] = {};
+typedef ComponentHeader Component;
 
-bool entity_index_valid(uint entity_index);
-
-void component_physics_set(uint entity_index, ComponentPhysics *data) {
-	if (entity_index_valid(entity_index)) {
-		component_physics[entity_index] = *data;
-	}
-}
-
-void component_jumper_set(uint entity_index, ComponentJumper *data) {
-	if (entity_index_valid(entity_index)) {
-		component_jumpers[entity_index] = *data;
-	}
-}
-
-void component_shaker_set(uint entity_index, ComponentShaker *data) {
-	if (entity_index_valid(entity_index)) {
-		component_shakers[entity_index] = *data;
-	}
-}
+ComponentPhysics component_physics[MAX_ENTITIES];
+ComponentJumper component_jumpers[MAX_ENTITIES];
+ComponentShaker component_shakers[MAX_ENTITIES];
 
 /* ==== ENTITIES ==================================== */
 
-uint last_entity_index = 0;
-bool active_entities[MAX_ENTITIES] = {};
+uint entity_index_last_free;
+bool entities_alive[MAX_ENTITIES];
 
-int entity_index_get() {
-	int i = last_entity_index;
-	while (active_entities[i]) {
+int entity_index_get_free() {
+	int i = entity_index_last_free;
+	while (entities_alive[i]) {
 		i++;
 		i %= MAX_ENTITIES;
-		if (i == last_entity_index) {
+		if (i == entity_index_last_free) {
 			return -1;
 		}
 	}
-	last_entity_index = i;
-	return last_entity_index;
+	entity_index_last_free = i;
+	return entity_index_last_free;
 }
 
-bool entity_index_valid(uint entity_index) {
+bool entity_index_is_valid(uint entity_index) {
 	if (entity_index >= MAX_ENTITIES) {
 		return false;
 	}
 	return true;
 }
 
-void entity_activate(uint entity_index) {
-	if (entity_index_valid(entity_index)) {
-		active_entities[entity_index] = true;
+void entity_set_alive(uint entity_index) {
+	if (entity_index_is_valid(entity_index)) {
+		entities_alive[entity_index] = true;
 	}
+}
+
+int entity_create(const Component **components, uint component_count) {
+	int entity_index = entity_index_get_free();
+	if (entity_index < 0) {
+		return -1;
+	}
+	for (int i = 0; i < component_count; ++i) {
+		switch (components[i]->type) {
+		case CT_PHYSICS:
+			component_physics[entity_index] = *(ComponentPhysics *)components[i];
+			break;
+		case CT_JUMPER:
+			component_jumpers[entity_index] = *(ComponentJumper *)components[i];
+			break;
+		case CT_SHAKER:
+			component_shakers[entity_index] = *(ComponentShaker *)components[i];
+			break;
+		}
+	}
+	entity_set_alive(entity_index);
+	return entity_index;
 }
 
 /* ==== SYSTEMS ==================================== */
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!active_entities[i]) {
+		if (!component_jumpers[i].header.active || !component_physics[i].header.active) {
 			return;
 		}
-		if (component_physics[i].position.y >= component_jumpers[i].ground_height) {
-			component_physics[i].position.y = component_jumpers[i].ground_height;
-			component_physics[i].velocity.y = -component_jumpers[i].jump_force;
+		if (component_physics[i].data.position.y >= component_jumpers[i].data.ground_height) {
+			component_physics[i].data.position.y = component_jumpers[i].data.ground_height;
+			component_physics[i].data.velocity.y = -component_jumpers[i].data.jump_force;
 		}
 	}
 }
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!active_entities[i]) {
+		if (!component_shakers[i].header.active || !component_physics[i].header.active) {
 			return;
 		}
-		if (component_physics[i].velocity.x >= 0) {
-			component_physics[i].velocity.x = -component_shakers[i].shake_speed;
+		if (component_physics[i].data.velocity.x >= 0) {
+			component_physics[i].data.velocity.x = -component_shakers[i].data.shake_speed;
 		} else {
-			component_physics[i].velocity.x = component_shakers[i].shake_speed;
+			component_physics[i].data.velocity.x = component_shakers[i].data.shake_speed;
 		}
 	}
 }
 
 void update_physics(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!active_entities[i]) {
+		if (!component_physics[i].header.active) {
 			return;
 		}
 		// Add gravity
-		component_physics[i].velocity.x += component_physics[i].gravity.x * delta;
-		component_physics[i].velocity.y += component_physics[i].gravity.y * delta;
+		component_physics[i].data.velocity.x += component_physics[i].data.gravity.x * delta;
+		component_physics[i].data.velocity.y += component_physics[i].data.gravity.y * delta;
 
 		// Update position
-		component_physics[i].position.x += component_physics[i].velocity.x * delta;
-		component_physics[i].position.y += component_physics[i].velocity.y * delta;
+		component_physics[i].data.position.x += component_physics[i].data.velocity.x * delta;
+		component_physics[i].data.position.y += component_physics[i].data.velocity.y * delta;
 	}
 }
 
@@ -166,25 +196,31 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	int entity_index;
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_index = entity_index_get();
-		if (entity_index < 0) {
-			continue;
-		}
-		component_jumper_set(entity_index, &(ComponentJumper){
-			.jump_force = 100.0,
-			.ground_height = 0.0
-		});
-		component_shaker_set(entity_index, &(ComponentShaker){
-			.shake_speed = 100.0
-		});
-		component_physics_set(entity_index, &(ComponentPhysics){
+	const ComponentPhysics physics = (ComponentPhysics){
+		.header = {.type = CT_PHYSICS, .active = true},
+		.data = {
 			.position = VEC_ZERO,
 			.velocity = VEC_ZERO,
 			.gravity = GRAVITY
-		});
-		entity_activate(entity_index);
+		}
+	};
+	const ComponentJumper jumper = (ComponentJumper){
+		.header = {.type = CT_JUMPER, .active = true},
+		.data = {
+			.jump_force = 100.0,
+			.ground_height = 0.0
+		}
+	};
+	const ComponentShaker shaker = (ComponentShaker){
+		.header = {.type = CT_SHAKER, .active = true},
+		.data = {
+			.shake_speed = 100.0
+		}
+	};
+	const Component *entity_components[] = {(Component *)&physics, (Component *)&jumper, (Component *)&shaker};
+
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		entity_create(entity_components, array_length(entity_components));
 	}
 
 	timespec time_start, time_end, sleep_time, work_time, frame_time;
