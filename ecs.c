@@ -199,41 +199,41 @@ const UpdateFunc update_funcs[] = {
 };
 const size_t update_funcs_count = array_length(update_funcs);
 
-int main() {
-	const Component *test_entity[] = {
-		(Component *)&(ComponentPhysics){
-			.header = {
-				.type = CT_PHYSICS,
-				.active = true
-			},
-			.data = {
-				.position = VEC_ZERO,
-				.velocity = VEC_ZERO,
-				.gravity = GRAVITY
-			}
+const Component *test_entity[] = {
+	(Component *)&(ComponentPhysics){
+		.header = {
+			.type = CT_PHYSICS,
+			.active = true
 		},
-		(Component *)&(ComponentJumper){
-			.header = {
-				.type = CT_JUMPER,
-				.active = true
-			},
-			.data = {
-				.jump_force = 100.0,
-				.ground_height = 0.0
-			}
+		.data = {
+			.position = VEC_ZERO,
+			.velocity = VEC_ZERO,
+			.gravity = GRAVITY
+		}
+	},
+	(Component *)&(ComponentJumper){
+		.header = {
+			.type = CT_JUMPER,
+			.active = true
 		},
-		(Component *)&(ComponentShaker){
-			.header = {
-				.type = CT_SHAKER,
-				.active = true
-			},
-			.data = {
-				.shake_speed = 100.0
-			}
+		.data = {
+			.jump_force = 100.0,
+			.ground_height = 0.0
+		}
+	},
+	(Component *)&(ComponentShaker){
+		.header = {
+			.type = CT_SHAKER,
+			.active = true
 		},
-		NULL
-	};
+		.data = {
+			.shake_speed = 100.0
+		}
+	},
+	NULL
+};
 
+int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(test_entity);
 	}
