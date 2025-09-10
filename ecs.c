@@ -129,7 +129,7 @@ void entity_set_alive(uint entity_index) {
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
  */
-int entity_create(const struct Component **components) {
+int entity_create(struct Component **components) {
 	int entity_index = entity_index_get_free();
 	if (entity_index < 0) {
 		return -1;
@@ -192,7 +192,7 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main() {
-	const struct Component *test_entity[] = {
+	struct Component *test_entity[] = {
 		component_create_physics(VEC_ZERO, VEC_ZERO, GRAVITY),
 		NULL
 	};
@@ -200,6 +200,7 @@ int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(test_entity);
 	}
+	free(test_entity[0]);
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
 	const struct timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
