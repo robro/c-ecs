@@ -1,12 +1,14 @@
 #include <bits/time.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <stdbool.h>
 
-#define DEBUG_BUILD 1
+#define DEBUG 1
 
 #define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
@@ -17,10 +19,8 @@
 
 #define array_length(arr) (sizeof(arr) / sizeof(arr[0]))
 
-typedef struct timespec timespec;
-
-timespec diff_timespec(const timespec *time_a, const timespec *time_b) {
-	timespec diff = {
+struct timespec diff_timespec(const struct timespec *time_a, const struct timespec *time_b) {
+	struct timespec diff = {
 		.tv_sec = time_a->tv_sec - time_b->tv_sec,
 		.tv_nsec = time_a->tv_nsec - time_b->tv_nsec,
 	};
@@ -31,66 +31,73 @@ timespec diff_timespec(const timespec *time_a, const timespec *time_b) {
 	return diff;
 }
 
-float timespec_to_secs(const timespec *time) {
+float timespec_to_secs(const struct timespec *time) {
 	return time->tv_sec + (float)time->tv_nsec / NSECS_IN_SEC;
 }
 
-typedef struct {
+struct Vec2 {
 	float x;
 	float y;
-} Vec2;
+};
 
-#define VEC_ZERO (Vec2){0, 0}
-#define GRAVITY (Vec2){0, 9.8}
+#define VEC_ZERO (struct Vec2){0, 0}
+#define GRAVITY (struct Vec2){0, 9.8}
 
 /* ==== COMPONENTS ================================== */
 
-typedef enum {
-	CT_PHYSICS,
-	CT_JUMPER,
-	CT_SHAKER,
-} ComponentType;
+struct Component;
 
-typedef struct {
-	ComponentType type;
+struct ComponentInterface {
+	void (*array_insert)(const struct Component *, uint);
+};
+
+struct Component {
+	const struct ComponentInterface *vtable;
 	bool active;
-} ComponentHeader;
+};
 
-typedef struct {
-	Vec2 position;
-	Vec2 velocity;
-	Vec2 gravity;
-} ComponentPhysicsData;
+struct ComponentPhysics {
+	struct Component base;
+	struct Vec2 position;
+	struct Vec2 velocity;
+	struct Vec2 gravity;
+};
 
-typedef struct {
+struct ComponentJumper {
+	struct Component base;
 	float jump_force;
 	float ground_height;
-} ComponentJumperData;
+};
 
-typedef struct {
+struct ComponentShaker {
+	struct Component base;
 	float shake_speed;
-} ComponentShakerData;
+};
 
-typedef struct {
-	ComponentHeader header;
-	ComponentPhysicsData data;
-} ComponentPhysics;
+struct ComponentPhysics component_physics[MAX_ENTITIES];
+struct ComponentJumper component_jumpers[MAX_ENTITIES];
+struct ComponentShaker component_shakers[MAX_ENTITIES];
 
-typedef struct {
-	ComponentHeader header;
-	ComponentJumperData data;
-} ComponentJumper;
+void component_array_insert(const struct Component *component, uint index) {
+	component->vtable->array_insert(component, index);
+}
 
-typedef struct {
-	ComponentHeader header;
-	ComponentShakerData data;
-} ComponentShaker;
+void physics_array_insert(const struct Component *component, uint index) {
+	component_physics[index] = *(struct ComponentPhysics *)component;
+}
 
-typedef ComponentHeader Component;
+struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
+	static const struct ComponentInterface vtable = {.array_insert = physics_array_insert};
+	static struct Component base = {.vtable = &vtable, .active = true};
 
-ComponentPhysics component_physics[MAX_ENTITIES];
-ComponentJumper component_jumpers[MAX_ENTITIES];
-ComponentShaker component_shakers[MAX_ENTITIES];
+	struct ComponentPhysics *physics = malloc(sizeof(*physics));
+	physics->base = base;
+	physics->position = position;
+	physics->velocity = velocity;
+	physics->gravity = gravity;
+
+	return (struct Component *)physics;
+}
 
 /* ==== ENTITIES ==================================== */
 
@@ -127,23 +134,13 @@ void entity_set_alive(uint entity_index) {
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
  */
-int entity_create(const Component **components) {
+int entity_create(const struct Component **components) {
 	int entity_index = entity_index_get_free();
 	if (entity_index < 0) {
 		return -1;
 	}
 	for (int i = 0; components[i]; ++i) {
-		switch (components[i]->type) {
-		case CT_PHYSICS:
-			component_physics[entity_index] = *(ComponentPhysics *)components[i];
-			break;
-		case CT_JUMPER:
-			component_jumpers[entity_index] = *(ComponentJumper *)components[i];
-			break;
-		case CT_SHAKER:
-			component_shakers[entity_index] = *(ComponentShaker *)components[i];
-			break;
-		}
+		component_array_insert(components[i], entity_index);
 	}
 	entity_set_alive(entity_index);
 	return entity_index;
@@ -153,41 +150,41 @@ int entity_create(const Component **components) {
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_jumpers[i].header.active || !component_physics[i].header.active) {
+		if (!component_jumpers[i].base.active || !component_physics[i].base.active) {
 			return;
 		}
-		if (component_physics[i].data.position.y >= component_jumpers[i].data.ground_height) {
-			component_physics[i].data.position.y = component_jumpers[i].data.ground_height;
-			component_physics[i].data.velocity.y = -component_jumpers[i].data.jump_force;
+		if (component_physics[i].position.y >= component_jumpers[i].ground_height) {
+			component_physics[i].position.y = component_jumpers[i].ground_height;
+			component_physics[i].velocity.y = -component_jumpers[i].jump_force;
 		}
 	}
 }
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_shakers[i].header.active || !component_physics[i].header.active) {
+		if (!component_shakers[i].base.active || !component_physics[i].base.active) {
 			return;
 		}
-		if (component_physics[i].data.velocity.x >= 0) {
-			component_physics[i].data.velocity.x = -component_shakers[i].data.shake_speed;
+		if (component_physics[i].velocity.x >= 0) {
+			component_physics[i].velocity.x = -component_shakers[i].shake_speed;
 		} else {
-			component_physics[i].data.velocity.x = component_shakers[i].data.shake_speed;
+			component_physics[i].velocity.x = component_shakers[i].shake_speed;
 		}
 	}
 }
 
 void update_physics(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_physics[i].header.active) {
+		if (!component_physics[i].base.active) {
 			return;
 		}
 		// Add gravity
-		component_physics[i].data.velocity.x += component_physics[i].data.gravity.x * delta;
-		component_physics[i].data.velocity.y += component_physics[i].data.gravity.y * delta;
+		component_physics[i].velocity.x += component_physics[i].gravity.x * delta;
+		component_physics[i].velocity.y += component_physics[i].gravity.y * delta;
 
 		// Update position
-		component_physics[i].data.position.x += component_physics[i].data.velocity.x * delta;
-		component_physics[i].data.position.y += component_physics[i].data.velocity.y * delta;
+		component_physics[i].position.x += component_physics[i].velocity.x * delta;
+		component_physics[i].position.y += component_physics[i].velocity.y * delta;
 	}
 }
 
@@ -199,51 +196,25 @@ const UpdateFunc update_funcs[] = {
 };
 const size_t update_funcs_count = array_length(update_funcs);
 
-const Component *test_entity[] = {
-	(Component *)&(ComponentPhysics){
-		.header = {
-			.type = CT_PHYSICS,
-			.active = true
-		},
-		.data = {
-			.position = VEC_ZERO,
-			.velocity = VEC_ZERO,
-			.gravity = GRAVITY
-		}
-	},
-	(Component *)&(ComponentJumper){
-		.header = {
-			.type = CT_JUMPER,
-			.active = true
-		},
-		.data = {
-			.jump_force = 100.0,
-			.ground_height = 0.0
-		}
-	},
-	(Component *)&(ComponentShaker){
-		.header = {
-			.type = CT_SHAKER,
-			.active = true
-		},
-		.data = {
-			.shake_speed = 100.0
-		}
-	},
-	NULL
-};
-
 int main() {
+	const struct Component *test_entity[] = {
+		component_create_physics(VEC_ZERO, VEC_ZERO, GRAVITY),
+		NULL
+	};
+
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(test_entity);
 	}
 
-	timespec time_start, time_end, sleep_time, work_time, frame_time;
-	const timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
+	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
+	const struct timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
 
 	// Game Loop
+#if DEBUG
+	for (int i = 0; i < GAME_LOOPS; ++i) {
+#else
 	while (1) {
-	// for (int i = 0; i < GAME_LOOPS; ++i) {
+#endif
 		clock_gettime(CLOCK_MONOTONIC, &time_start);
 		for (int j = 0; j < update_funcs_count; ++j) {
 			update_funcs[j](SECS_PER_FRAME);
@@ -254,7 +225,7 @@ int main() {
 		if (sleep_time.tv_sec >= 0 && sleep_time.tv_nsec > 0) {
 			nanosleep(&sleep_time, NULL);
 		}
-#if DEBUG_BUILD
+#if DEBUG
 		clock_gettime(CLOCK_MONOTONIC, &time_end);
 		frame_time = diff_timespec(&time_end, &time_start);
 		printf(
