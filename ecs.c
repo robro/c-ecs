@@ -90,18 +90,15 @@ void component_array_insert(const struct Component *component, uint index) {
 }
 
 void component_array_insert_physics(const struct Component *component, uint index) {
-	struct ComponentPhysics *c = (struct ComponentPhysics *)component;
-	component_data_physics[index] = c->data;
+	component_data_physics[index] = ((struct ComponentPhysics *)component)->data;
 }
 
 void component_array_insert_jumper(const struct Component *component, uint index) {
-	struct ComponentJumper *c = (struct ComponentJumper *)component;
-	component_data_jumpers[index] = c->data;
+	component_data_jumpers[index] = ((struct ComponentJumper *)component)->data;
 }
 
 void component_array_insert_shaker(const struct Component *component, uint index) {
-	struct ComponentShaker *c = (struct ComponentShaker *)component;
-	component_data_shakers[index] = c->data;
+	component_data_shakers[index] = ((struct ComponentShaker *)component)->data;
 }
 
 struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
