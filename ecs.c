@@ -142,7 +142,7 @@ void entity_set_alive(uint index) {
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
  */
-int entity_create(const struct Component **components) {
+int entity_create(const struct Component *components[]) {
 	int entity_index = entity_index_get_free();
 	if (entity_index < 0) {
 		return -1;
