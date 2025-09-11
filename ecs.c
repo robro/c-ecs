@@ -75,21 +75,21 @@ void component_array_insert(const struct Component *component, uint index) {
 	component->vtable->array_insert(component, index);
 }
 
-void array_insert_physics(const struct Component *component, uint index) {
+void component_array_insert_physics(const struct Component *component, uint index) {
 	component_physics[index] = *(struct ComponentPhysics *)component;
 }
 
-void array_insert_jumper(const struct Component *component, uint index) {
+void component_array_insert_jumper(const struct Component *component, uint index) {
 	component_jumpers[index] = *(struct ComponentJumper *)component;
 }
 
-void array_insert_shaker(const struct Component *component, uint index) {
+void component_array_insert_shaker(const struct Component *component, uint index) {
 	component_shakers[index] = *(struct ComponentShaker *)component;
 }
 
 struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
 	static const struct ComponentInterface vtable = {
-		.array_insert = array_insert_physics
+		.array_insert = component_array_insert_physics
 	};
 	struct ComponentPhysics *physics = malloc(sizeof(struct ComponentPhysics));
 	if (physics == NULL) {
@@ -106,7 +106,7 @@ struct Component *component_create_physics(struct Vec2 position, struct Vec2 vel
 
 struct Component *component_create_jumper(float jump_force, float ground_height) {
 	static const struct ComponentInterface vtable = {
-		.array_insert = array_insert_jumper
+		.array_insert = component_array_insert_jumper
 	};
 	struct ComponentJumper *jumper = malloc(sizeof(struct ComponentJumper));
 	if (jumper == NULL) {
@@ -122,7 +122,7 @@ struct Component *component_create_jumper(float jump_force, float ground_height)
 
 struct Component *component_create_shaker(float shake_speed) {
 	static const struct ComponentInterface vtable = {
-		.array_insert = array_insert_shaker
+		.array_insert = component_array_insert_shaker
 	};
 	struct ComponentShaker *shaker = malloc(sizeof(struct ComponentShaker));
 	if (shaker == NULL) {
