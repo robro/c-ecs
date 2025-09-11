@@ -200,7 +200,7 @@ int entity_create(struct Component **components) {
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_data_jumpers[i].active || !component_data_physics[i].active) {
+		if (!component_data_jumpers[i].active) {
 			return;
 		}
 		if (component_data_physics[i].position.y >= component_data_jumpers[i].ground_height) {
@@ -212,7 +212,7 @@ void update_jumpers(float delta) {
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_data_shakers[i].active || !component_data_physics[i].active) {
+		if (!component_data_shakers[i].active) {
 			return;
 		}
 		if (component_data_physics[i].velocity.x >= 0) {
