@@ -45,6 +45,7 @@ enum ComponentType {
 	CT_PHYSICS,
 	CT_JUMPER,
 	CT_SHAKER,
+	CT_LIFETIME,
 };
 
 struct Component {
@@ -84,9 +85,20 @@ struct ComponentShaker {
 	struct ComponentDataShaker data;
 };
 
+struct ComponentDataLifetime {
+	float lifetime;
+	bool active;
+};
+
+struct ComponentLifetime {
+	struct Component base;
+	struct ComponentDataLifetime data;
+};
+
 struct ComponentDataPhysics component_data_physics[MAX_ENTITIES];
 struct ComponentDataJumper component_data_jumpers[MAX_ENTITIES];
 struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
+struct ComponentDataLifetime component_data_lifetimes[MAX_ENTITIES];
 
 void component_array_insert(const struct Component *component, uint index) {
 	if (index >= MAX_ENTITIES) {
@@ -103,6 +115,9 @@ void component_array_insert(const struct Component *component, uint index) {
 			break;
 		case CT_SHAKER:
 			component_data_shakers[index] = ((struct ComponentShaker *)component)->data;
+			break;
+		case CT_LIFETIME:
+			component_data_lifetimes[index] = ((struct ComponentLifetime *)component)->data;
 			break;
 	}
 }
@@ -125,6 +140,27 @@ int entity_index_get_free(void) {
 	return entity_index_last_free;
 }
 
+void entity_set_alive(uint index) {
+	if (index >= MAX_ENTITIES) {
+		return;
+	}
+	entities_alive[index] = true;
+}
+
+void entity_set_dead(uint index) {
+	if (index >= MAX_ENTITIES) {
+		return;
+	}
+	entities_alive[index] = false;
+}
+
+bool entity_is_alive(uint index) {
+	if (index >= MAX_ENTITIES) {
+		return false;
+	}
+	return entities_alive[index];
+}
+
 /*
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
@@ -137,7 +173,7 @@ int entity_create(const struct Component *components[]) {
 	for (int i = 0; components[i]; ++i) {
 		component_array_insert(components[i], entity_index);
 	}
-	entities_alive[entity_index] = true;
+	entity_set_alive(entity_index);
 	return entity_index;
 }
 
@@ -145,7 +181,7 @@ int entity_create(const struct Component *components[]) {
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_data_jumpers[i].active) {
+		if (!entity_is_alive(i) || !component_data_jumpers[i].active) {
 			return;
 		}
 		if (component_data_physics[i].position.y >= component_data_jumpers[i].ground_height) {
@@ -157,7 +193,7 @@ void update_jumpers(float delta) {
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_data_shakers[i].active) {
+		if (!entity_is_alive(i) || !component_data_shakers[i].active) {
 			return;
 		}
 		if (component_data_physics[i].velocity.x >= 0) {
@@ -170,7 +206,7 @@ void update_shakers(float delta) {
 
 void update_physics(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_data_physics[i].active) {
+		if (!entity_is_alive(i) || !component_data_physics[i].active) {
 			return;
 		}
 		// Add gravity
@@ -183,11 +219,25 @@ void update_physics(float delta) {
 	}
 }
 
+void update_lifetime(float delta) {
+	for (int i = 0; i < MAX_ENTITIES; ++i) {
+		if (!entity_is_alive(i) || !component_data_lifetimes[i].active) {
+			return;
+		}
+		if (component_data_lifetimes[i].lifetime <= 0) {
+			entity_set_dead(i);
+			return;
+		}
+		component_data_lifetimes[i].lifetime -= delta;
+	}
+}
+
 typedef void (*UpdateFunc)(float);
 const UpdateFunc update_funcs[] = {
 	update_jumpers,
 	update_shakers,
 	update_physics,
+	update_lifetime,
 };
 const size_t update_funcs_count = array_length(update_funcs);
 
@@ -203,6 +253,10 @@ const struct Component *entity_test[] = {
 	(struct Component *)&(struct ComponentShaker){
 		.base = {.type = CT_SHAKER},
 		.data = {.shake_speed = 69, .active = true}
+	},
+	(struct Component *)&(struct ComponentLifetime){
+		.base = {.type = CT_LIFETIME},
+		.data = {.lifetime = 1, .active = true}
 	},
 	NULL
 };
