@@ -40,12 +40,15 @@ struct Vec2 {
 
 /* ==== COMPONENTS ================================== */
 
-struct Component {
-	const struct ComponentInterface *vtable;
+enum ComponentType {
+	CT_NONE,
+	CT_PHYSICS,
+	CT_JUMPER,
+	CT_SHAKER,
 };
 
-struct ComponentInterface {
-	void (*array_insert)(const struct Component *, uint);
+struct Component {
+	enum ComponentType type;
 };
 
 struct ComponentDataPhysics {
@@ -86,67 +89,22 @@ struct ComponentDataJumper component_data_jumpers[MAX_ENTITIES];
 struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
 
 void component_array_insert(const struct Component *component, uint index) {
-	component->vtable->array_insert(component, index);
-}
-
-void component_array_insert_physics(const struct Component *component, uint index) {
-	component_data_physics[index] = ((struct ComponentPhysics *)component)->data;
-}
-
-void component_array_insert_jumper(const struct Component *component, uint index) {
-	component_data_jumpers[index] = ((struct ComponentJumper *)component)->data;
-}
-
-void component_array_insert_shaker(const struct Component *component, uint index) {
-	component_data_shakers[index] = ((struct ComponentShaker *)component)->data;
-}
-
-struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
-	static const struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_physics
-	};
-	struct ComponentPhysics *physics = malloc(sizeof(struct ComponentPhysics));
-	if (physics == NULL) {
-		return NULL;
+	if (index >= MAX_ENTITIES) {
+		return;
 	}
-	physics->base.vtable = &vtable;
-	physics->data.position = position;
-	physics->data.velocity = velocity;
-	physics->data.gravity = gravity;
-	physics->data.active = true;
-
-	return (struct Component *)physics;
-}
-
-struct Component *component_create_jumper(float jump_force, float ground_height) {
-	static const struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_jumper
-	};
-	struct ComponentJumper *jumper = malloc(sizeof(struct ComponentJumper));
-	if (jumper == NULL) {
-		return NULL;
+	switch (component->type) {
+		case CT_NONE:
+			return;
+		case CT_PHYSICS:
+			component_data_physics[index] = ((struct ComponentPhysics *)component)->data;
+			break;
+		case CT_JUMPER:
+			component_data_jumpers[index] = ((struct ComponentJumper *)component)->data;
+			break;
+		case CT_SHAKER:
+			component_data_shakers[index] = ((struct ComponentShaker *)component)->data;
+			break;
 	}
-	jumper->base.vtable = &vtable;
-	jumper->data.jump_force = jump_force;
-	jumper->data.ground_height = ground_height;
-	jumper->data.active = true;
-	
-	return (struct Component *)jumper;
-}
-
-struct Component *component_create_shaker(float shake_speed) {
-	static const struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_shaker
-	};
-	struct ComponentShaker *shaker = malloc(sizeof(struct ComponentShaker));
-	if (shaker == NULL) {
-		return NULL;
-	}
-	shaker->base.vtable = &vtable;
-	shaker->data.shake_speed = shake_speed;
-	shaker->data.active = true;
-
-	return (struct Component *)shaker;
 }
 
 /* ==== ENTITIES ==================================== */
@@ -184,7 +142,7 @@ void entity_set_alive(uint index) {
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
  */
-int entity_create(struct Component **components) {
+int entity_create(const struct Component **components) {
 	int entity_index = entity_index_get_free();
 	if (entity_index < 0) {
 		return -1;
@@ -246,16 +204,25 @@ const UpdateFunc update_funcs[] = {
 };
 const size_t update_funcs_count = array_length(update_funcs);
 
-int main() {
-	struct Component *test_entity[] = {
-		component_create_physics(VEC_ZERO, VEC_ZERO, GRAVITY),
-		component_create_jumper(100.0, 0.0),
-		component_create_shaker(100.0),
-		NULL
-	};
+const struct Component *entity_test[] = {
+	(struct Component *)&(struct ComponentPhysics){
+		.base = {.type = CT_PHYSICS},
+		.data = {.position = VEC_ZERO, .velocity = VEC_ZERO, .gravity = GRAVITY, .active = true}
+	},
+	(struct Component *)&(struct ComponentJumper){
+		.base = {.type = CT_JUMPER},
+		.data = {.jump_force = 69, .ground_height = 0, .active = true}
+	},
+	(struct Component *)&(struct ComponentShaker){
+		.base = {.type = CT_SHAKER},
+		.data = {.shake_speed = 69, .active = true}
+	},
+	NULL
+};
 
+int main() {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(test_entity);
+		entity_create(entity_test);
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
