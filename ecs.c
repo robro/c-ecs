@@ -40,15 +40,13 @@ struct Vec2 {
 
 /* ==== COMPONENTS ================================== */
 
-struct Component;
-
-struct ComponentInterface {
-	void (*array_insert)(const struct Component *, uint);
-};
-
 struct Component {
 	const struct ComponentInterface *vtable;
 	bool active;
+};
+
+struct ComponentInterface {
+	void (*array_insert)(const struct Component *, uint);
 };
 
 struct ComponentPhysics {
@@ -77,21 +75,64 @@ void component_array_insert(const struct Component *component, uint index) {
 	component->vtable->array_insert(component, index);
 }
 
-void physics_array_insert(const struct Component *component, uint index) {
+void array_insert_physics(const struct Component *component, uint index) {
 	component_physics[index] = *(struct ComponentPhysics *)component;
 }
 
-struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
-	static const struct ComponentInterface vtable = {.array_insert = physics_array_insert};
-	static struct Component base = {.vtable = &vtable, .active = true};
+void array_insert_jumper(const struct Component *component, uint index) {
+	component_jumpers[index] = *(struct ComponentJumper *)component;
+}
 
-	struct ComponentPhysics *physics = malloc(sizeof(*physics));
-	physics->base = base;
+void array_insert_shaker(const struct Component *component, uint index) {
+	component_shakers[index] = *(struct ComponentShaker *)component;
+}
+
+struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
+	static const struct ComponentInterface vtable = {
+		.array_insert = array_insert_physics
+	};
+	struct ComponentPhysics *physics = malloc(sizeof(struct ComponentPhysics));
+	if (physics == NULL) {
+		return NULL;
+	}
+	physics->base.vtable = &vtable;
+	physics->base.active = true;
 	physics->position = position;
 	physics->velocity = velocity;
 	physics->gravity = gravity;
 
 	return (struct Component *)physics;
+}
+
+struct Component *component_create_jumper(float jump_force, float ground_height) {
+	static const struct ComponentInterface vtable = {
+		.array_insert = array_insert_jumper
+	};
+	struct ComponentJumper *jumper = malloc(sizeof(struct ComponentJumper));
+	if (jumper == NULL) {
+		return NULL;
+	}
+	jumper->base.vtable = &vtable;
+	jumper->base.active = true;
+	jumper->jump_force = jump_force;
+	jumper->ground_height = ground_height;
+	
+	return (struct Component *)jumper;
+}
+
+struct Component *component_create_shaker(float shake_speed) {
+	static const struct ComponentInterface vtable = {
+		.array_insert = array_insert_shaker
+	};
+	struct ComponentShaker *shaker = malloc(sizeof(struct ComponentShaker));
+	if (shaker == NULL) {
+		return NULL;
+	}
+	shaker->base.vtable = &vtable;
+	shaker->base.active = true;
+	shaker->shake_speed = shake_speed;
+
+	return (struct Component *)shaker;
 }
 
 /* ==== ENTITIES ==================================== */
@@ -194,13 +235,14 @@ const size_t update_funcs_count = array_length(update_funcs);
 int main() {
 	struct Component *test_entity[] = {
 		component_create_physics(VEC_ZERO, VEC_ZERO, GRAVITY),
+		component_create_jumper(100.0, 0.0),
+		component_create_shaker(100.0),
 		NULL
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(test_entity);
 	}
-	free(test_entity[0]);
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
 	const struct timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
