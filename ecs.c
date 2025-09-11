@@ -42,49 +42,70 @@ struct Vec2 {
 
 struct Component {
 	const struct ComponentInterface *vtable;
-	bool active;
 };
 
 struct ComponentInterface {
 	void (*array_insert)(const struct Component *, uint);
 };
 
-struct ComponentPhysics {
-	struct Component base;
+struct ComponentDataPhysics {
 	struct Vec2 position;
 	struct Vec2 velocity;
 	struct Vec2 gravity;
 };
 
-struct ComponentJumper {
+struct ComponentPhysics {
 	struct Component base;
+	struct ComponentDataPhysics data;
+};
+
+struct ComponentDataJumper {
 	float jump_force;
 	float ground_height;
 };
 
-struct ComponentShaker {
+struct ComponentJumper {
 	struct Component base;
+	struct ComponentDataJumper data;
+};
+
+struct ComponentDataShaker {
 	float shake_speed;
 };
 
-struct ComponentPhysics component_physics[MAX_ENTITIES];
-struct ComponentJumper component_jumpers[MAX_ENTITIES];
-struct ComponentShaker component_shakers[MAX_ENTITIES];
+struct ComponentShaker {
+	struct Component base;
+	struct ComponentDataShaker data;
+};
+
+struct ComponentDataPhysics component_data_physics[MAX_ENTITIES];
+struct ComponentDataJumper component_data_jumpers[MAX_ENTITIES];
+struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
+
+bool component_active_physics[MAX_ENTITIES];
+bool component_active_jumpers[MAX_ENTITIES];
+bool component_active_shakers[MAX_ENTITIES];
 
 void component_array_insert(const struct Component *component, uint index) {
 	component->vtable->array_insert(component, index);
 }
 
 void component_array_insert_physics(const struct Component *component, uint index) {
-	component_physics[index] = *(struct ComponentPhysics *)component;
+	struct ComponentPhysics *c = (struct ComponentPhysics *)component;
+	component_data_physics[index] = c->data;
+	component_active_physics[index] = true;
 }
 
 void component_array_insert_jumper(const struct Component *component, uint index) {
-	component_jumpers[index] = *(struct ComponentJumper *)component;
+	struct ComponentJumper *c = (struct ComponentJumper *)component;
+	component_data_jumpers[index] = c->data;
+	component_active_jumpers[index] = true;
 }
 
 void component_array_insert_shaker(const struct Component *component, uint index) {
-	component_shakers[index] = *(struct ComponentShaker *)component;
+	struct ComponentShaker *c = (struct ComponentShaker *)component;
+	component_data_shakers[index] = c->data;
+	component_active_shakers[index] = true;
 }
 
 struct Component *component_create_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
@@ -96,10 +117,9 @@ struct Component *component_create_physics(struct Vec2 position, struct Vec2 vel
 		return NULL;
 	}
 	physics->base.vtable = &vtable;
-	physics->base.active = true;
-	physics->position = position;
-	physics->velocity = velocity;
-	physics->gravity = gravity;
+	physics->data.position = position;
+	physics->data.velocity = velocity;
+	physics->data.gravity = gravity;
 
 	return (struct Component *)physics;
 }
@@ -113,9 +133,8 @@ struct Component *component_create_jumper(float jump_force, float ground_height)
 		return NULL;
 	}
 	jumper->base.vtable = &vtable;
-	jumper->base.active = true;
-	jumper->jump_force = jump_force;
-	jumper->ground_height = ground_height;
+	jumper->data.jump_force = jump_force;
+	jumper->data.ground_height = ground_height;
 	
 	return (struct Component *)jumper;
 }
@@ -129,8 +148,7 @@ struct Component *component_create_shaker(float shake_speed) {
 		return NULL;
 	}
 	shaker->base.vtable = &vtable;
-	shaker->base.active = true;
-	shaker->shake_speed = shake_speed;
+	shaker->data.shake_speed = shake_speed;
 
 	return (struct Component *)shaker;
 }
@@ -186,41 +204,41 @@ int entity_create(struct Component **components) {
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_jumpers[i].base.active || !component_physics[i].base.active) {
+		if (!component_active_jumpers[i] || !component_active_physics[i]) {
 			return;
 		}
-		if (component_physics[i].position.y >= component_jumpers[i].ground_height) {
-			component_physics[i].position.y = component_jumpers[i].ground_height;
-			component_physics[i].velocity.y = -component_jumpers[i].jump_force;
+		if (component_data_physics[i].position.y >= component_data_jumpers[i].ground_height) {
+			component_data_physics[i].position.y = component_data_jumpers[i].ground_height;
+			component_data_physics[i].velocity.y = -component_data_jumpers[i].jump_force;
 		}
 	}
 }
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_shakers[i].base.active || !component_physics[i].base.active) {
+		if (!component_active_shakers[i] || !component_active_physics[i]) {
 			return;
 		}
-		if (component_physics[i].velocity.x >= 0) {
-			component_physics[i].velocity.x = -component_shakers[i].shake_speed;
+		if (component_data_physics[i].velocity.x >= 0) {
+			component_data_physics[i].velocity.x = -component_data_shakers[i].shake_speed;
 		} else {
-			component_physics[i].velocity.x = component_shakers[i].shake_speed;
+			component_data_physics[i].velocity.x = component_data_shakers[i].shake_speed;
 		}
 	}
 }
 
 void update_physics(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!component_physics[i].base.active) {
+		if (!component_active_physics[i]) {
 			return;
 		}
 		// Add gravity
-		component_physics[i].velocity.x += component_physics[i].gravity.x * delta;
-		component_physics[i].velocity.y += component_physics[i].gravity.y * delta;
+		component_data_physics[i].velocity.x += component_data_physics[i].gravity.x * delta;
+		component_data_physics[i].velocity.y += component_data_physics[i].gravity.y * delta;
 
 		// Update position
-		component_physics[i].position.x += component_physics[i].velocity.x * delta;
-		component_physics[i].position.y += component_physics[i].velocity.y * delta;
+		component_data_physics[i].position.x += component_data_physics[i].velocity.x * delta;
+		component_data_physics[i].position.y += component_data_physics[i].velocity.y * delta;
 	}
 }
 
