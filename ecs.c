@@ -112,7 +112,7 @@ void component_array_insert(const struct Component *component, uint index) {
 uint entity_index_last_free;
 bool entities_alive[MAX_ENTITIES];
 
-int entity_index_get_free() {
+int entity_index_get_free(void) {
 	int i = entity_index_last_free;
 	while (entities_alive[i]) {
 		i++;
@@ -207,7 +207,7 @@ const struct Component *entity_test[] = {
 	NULL
 };
 
-int main() {
+int main(void) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(entity_test);
 	}
