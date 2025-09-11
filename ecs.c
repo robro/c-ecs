@@ -125,19 +125,6 @@ int entity_index_get_free() {
 	return entity_index_last_free;
 }
 
-bool entity_index_is_valid(uint index) {
-	if (index >= MAX_ENTITIES) {
-		return false;
-	}
-	return true;
-}
-
-void entity_set_alive(uint index) {
-	if (entity_index_is_valid(index)) {
-		entities_alive[index] = true;
-	}
-}
-
 /*
  * Takes NULL terminated array of Component pointers.
  * Returns entity index or -1 if no free indices.
@@ -150,7 +137,7 @@ int entity_create(const struct Component *components[]) {
 	for (int i = 0; components[i]; ++i) {
 		component_array_insert(components[i], entity_index);
 	}
-	entity_set_alive(entity_index);
+	entities_alive[entity_index] = true;
 	return entity_index;
 }
 
