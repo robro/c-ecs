@@ -10,6 +10,8 @@ struct Vec2 {
 	float y;
 };
 
+#define VEC_ZERO (struct Vec2){0, 0}
+
 struct timespec timespec_diff(const struct timespec *time_a, const struct timespec *time_b);
 
 float timespec_to_secs(const struct timespec *time);

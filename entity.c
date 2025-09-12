@@ -68,15 +68,3 @@ bool entity_is_alive(uint index) {
 	}
 	return entities.alive[index];
 }
-
-int entity_create(const struct Component *components[]) {
-	int entity_index = entity_get_free_index();
-	if (entity_index < 0) {
-		return -1;
-	}
-	for (int i = 0; components[i]; ++i) {
-		component_array_insert(components[i], entity_index);
-	}
-	entities.alive[entity_index] = true;
-	return entity_index;
-}

@@ -16,27 +16,27 @@
 
 /* ==== COMPONENTS ================================== */
 
-struct ComponentDataPhysics component_data_physics[MAX_ENTITIES];
-struct ComponentDataJumper component_data_jumpers[MAX_ENTITIES];
-struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
-struct ComponentDataLifetime component_data_lifetimes[MAX_ENTITIES];
+struct ComponentPhysics component_data_physics[MAX_ENTITIES];
+struct ComponentJumper component_data_jumpers[MAX_ENTITIES];
+struct ComponentShaker component_data_shakers[MAX_ENTITIES];
+struct ComponentLifetime component_data_lifetimes[MAX_ENTITIES];
 
-const struct ComponentDataPhysics test_physics = {
+const struct ComponentPhysics test_physics = {
 	.position = VEC_ZERO,
 	.velocity = VEC_ZERO,
 	.gravity = GRAVITY,
 	.active = true
 };
-const struct ComponentDataJumper test_jumper = {
+const struct ComponentJumper test_jumper = {
 	.jump_force = 69,
 	.ground_height = 420,
 	.active = true
 };
-const struct ComponentDataShaker test_shaker = {
+const struct ComponentShaker test_shaker = {
 	.shake_speed = 69,
 	.active = true
 };
-const struct ComponentDataLifetime test_lifetime = {
+const struct ComponentLifetime test_lifetime = {
 	.lifetime = 1,
 	.active = true
 };
@@ -106,21 +106,17 @@ const UpdateFunc update_funcs[] = {
 };
 
 int main(void) {
-	const struct Component *test_components[] = {
-		component_get_physics(&test_physics, component_data_physics),
-		component_get_jumper(&test_jumper, component_data_jumpers),
-		component_get_shaker(&test_shaker, component_data_shakers),
-		component_get_lifetime(&test_lifetime, component_data_lifetimes),
-		NULL
-	};
-
 	if (!entity_initialize_entities(MAX_ENTITIES)) {
 		printf("Entity initialization failed\n");
 		return 1;
 	}
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(test_components);
+		component_data_physics[i] = test_physics;
+		component_data_jumpers[i] = test_jumper;
+		component_data_shakers[i] = test_shaker;
+		component_data_lifetimes[i] = test_lifetime;
+		entity_set_alive(i);
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
