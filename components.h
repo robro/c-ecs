@@ -1,9 +1,8 @@
-#ifndef COMPONENTS_H
-#define COMPONENTS_H
+#ifndef _COMPONENTS_H
+#define _COMPONENTS_H
 
 #include <stdbool.h>
-
-#include "misc.h"
+#include "util.h"
 #include "component.h"
 
 struct ComponentDataPhysics {
@@ -52,11 +51,6 @@ struct ComponentLifetime {
 	struct ComponentDataLifetime data;
 	struct ComponentDataLifetime *array;
 };
-
-void component_array_insert_physics(const struct Component *component, uint index);
-void component_array_insert_jumper(const struct Component *component, uint index);
-void component_array_insert_shaker(const struct Component *component, uint index);
-void component_array_insert_lifetime(const struct Component *component, uint index);
 
 struct Component* component_get_physics(const struct ComponentDataPhysics *data, struct ComponentDataPhysics array[]);
 struct Component* component_get_jumper(const struct ComponentDataJumper *data, struct ComponentDataJumper array[]);
