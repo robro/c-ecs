@@ -33,12 +33,12 @@ const struct ComponentLifetime test_lifetime = {
 	.active = true
 };
 
+/* ==== SYSTEMS ==================================== */
+
 struct ComponentPhysics components_physics[MAX_ENTITIES];
 struct ComponentJumper components_jumpers[MAX_ENTITIES];
 struct ComponentShaker components_shakers[MAX_ENTITIES];
 struct ComponentLifetime components_lifetimes[MAX_ENTITIES];
-
-/* ==== SYSTEMS ==================================== */
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
