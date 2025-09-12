@@ -3,8 +3,6 @@
 #include <time.h>
 #include <stdbool.h>
 
-#define DEBUG 1
-
 #define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
 #define FRAMES 100
@@ -97,9 +95,6 @@ struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
 struct ComponentDataLifetime component_data_lifetimes[MAX_ENTITIES];
 
 void component_array_insert(const struct Component *component, uint index) {
-	if (index >= MAX_ENTITIES) {
-		return;
-	}
 	component->vtable->array_insert(component, index);
 }
 
@@ -119,56 +114,50 @@ void component_array_insert_lifetime(const struct Component *component, uint ind
 	component_data_lifetimes[index] = ((struct ComponentLifetime *)component)->data;
 }
 
-struct ComponentPhysics* component_get_physics(struct Vec2 position, struct Vec2 velocity, struct Vec2 gravity) {
+struct Component* component_get_physics(const struct ComponentDataPhysics *data) {
 	static struct ComponentInterface vtable = {
 		.array_insert = component_array_insert_physics
 	};
 	struct ComponentPhysics *c_physics = malloc(sizeof(struct ComponentPhysics));
 	c_physics->base.vtable = &vtable;
-	c_physics->data.position = position;
-	c_physics->data.velocity = velocity;
-	c_physics->data.gravity = gravity;
-	c_physics->data.active = true;
-
-	return c_physics;
+	c_physics->data = *data;
+	return (struct Component *)c_physics;
 }
 
-struct ComponentJumper* component_get_jumper(float jump_force, float ground_height) {
+struct Component* component_get_jumper(const struct ComponentDataJumper *data) {
 	static struct ComponentInterface vtable = {
 		.array_insert = component_array_insert_jumper
 	};
 	struct ComponentJumper *c_jumper = malloc(sizeof(struct ComponentJumper));
 	c_jumper->base.vtable = &vtable;
-	c_jumper->data.jump_force = jump_force;
-	c_jumper->data.ground_height = ground_height;
-	c_jumper->data.active = true;
-
-	return c_jumper;
+	c_jumper->data = *data;
+	return (struct Component *)c_jumper;
 }
 
-struct ComponentShaker* component_get_shaker(float shake_speed) {
+struct Component* component_get_shaker(const struct ComponentDataShaker *data) {
 	static struct ComponentInterface vtable = {
 		.array_insert = component_array_insert_shaker
 	};
 	struct ComponentShaker *c_shaker = malloc(sizeof(struct ComponentJumper));
 	c_shaker->base.vtable = &vtable;
-	c_shaker->data.shake_speed = shake_speed;
-	c_shaker->data.active = true;
-
-	return c_shaker;
+	c_shaker->data = *data;
+	return (struct Component *)c_shaker;
 }
 
-struct ComponentLifetime* component_get_lifetime(float lifetime) {
+struct Component* component_get_lifetime(const struct ComponentDataLifetime *data) {
 	static struct ComponentInterface vtable = {
 		.array_insert = component_array_insert_lifetime
 	};
 	struct ComponentLifetime *c_lifetime = malloc(sizeof(struct ComponentLifetime));
 	c_lifetime->base.vtable = &vtable;
-	c_lifetime->data.lifetime = lifetime;
-	c_lifetime->data.active = true;
-
-	return c_lifetime;
+	c_lifetime->data = *data;
+	return (struct Component *)c_lifetime;
 }
+
+const struct ComponentDataPhysics test_physics = {.position = VEC_ZERO, .velocity = VEC_ZERO, .gravity = GRAVITY, .active = true};
+const struct ComponentDataJumper test_jumper = {.jump_force = 69, .ground_height = 420, .active = true};
+const struct ComponentDataShaker test_shaker = {.shake_speed = 69, .active = true};
+const struct ComponentDataLifetime test_lifetime = {.lifetime = 1, .active = true};
 
 /* ==== ENTITIES ==================================== */
 
@@ -290,27 +279,23 @@ const UpdateFunc update_funcs[] = {
 const size_t update_funcs_count = array_length(update_funcs);
 
 int main(void) {
-	const struct Component *entity_test[] = {
-		(struct Component *)component_get_physics(VEC_ZERO, VEC_ZERO, GRAVITY),
-		(struct Component *)component_get_jumper(69, 69),
-		(struct Component *)component_get_shaker(69),
-		(struct Component *)component_get_lifetime(1),
+	const struct Component *test_components[] = {
+		component_get_physics(&test_physics),
+		component_get_jumper(&test_jumper),
+		component_get_shaker(&test_shaker),
+		component_get_lifetime(&test_lifetime),
 		NULL
 	};
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_create(entity_test);
+		entity_create(test_components);
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
 	const struct timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
 
 	// Game Loop
-#if DEBUG
 	for (int i = 0; i < FRAMES; ++i) {
-#else
-	while (1) {
-#endif
 		clock_gettime(CLOCK_MONOTONIC, &time_start);
 		for (int j = 0; j < update_funcs_count; ++j) {
 			update_funcs[j](SECS_PER_FRAME);
@@ -321,7 +306,6 @@ int main(void) {
 		if (sleep_time.tv_sec >= 0 && sleep_time.tv_nsec > 0) {
 			nanosleep(&sleep_time, NULL);
 		}
-#if DEBUG
 		clock_gettime(CLOCK_MONOTONIC, &time_end);
 		frame_time = diff_timespec(&time_end, &time_start);
 		printf(
@@ -330,7 +314,6 @@ int main(void) {
 			timespec_to_secs(&work_time),
 			timespec_to_secs(&frame_time)
 		);
-#endif
 	}
 
 	return 0;
