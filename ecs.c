@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <time.h>
-#include <stdbool.h>
-
-#include "components.h"
+#include "component.h"
 #include "entity.h"
 
 #define MAX_ENTITIES 1000000
@@ -14,11 +12,6 @@
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
 
 /* ==== COMPONENTS ================================== */
-
-struct ComponentPhysics component_data_physics[MAX_ENTITIES];
-struct ComponentJumper component_data_jumpers[MAX_ENTITIES];
-struct ComponentShaker component_data_shakers[MAX_ENTITIES];
-struct ComponentLifetime component_data_lifetimes[MAX_ENTITIES];
 
 const struct ComponentPhysics test_physics = {
 	.position = VEC_ZERO,
@@ -40,58 +33,63 @@ const struct ComponentLifetime test_lifetime = {
 	.active = true
 };
 
+struct ComponentPhysics components_physics[MAX_ENTITIES];
+struct ComponentJumper components_jumpers[MAX_ENTITIES];
+struct ComponentShaker components_shakers[MAX_ENTITIES];
+struct ComponentLifetime components_lifetimes[MAX_ENTITIES];
+
 /* ==== SYSTEMS ==================================== */
 
 void update_jumpers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !component_data_jumpers[i].active) {
+		if (!entity_is_alive(i) || !components_jumpers[i].active) {
 			return;
 		}
-		if (component_data_physics[i].position.y >= component_data_jumpers[i].ground_height) {
-			component_data_physics[i].position.y = component_data_jumpers[i].ground_height;
-			component_data_physics[i].velocity.y = -component_data_jumpers[i].jump_force;
+		if (components_physics[i].position.y >= components_jumpers[i].ground_height) {
+			components_physics[i].position.y = components_jumpers[i].ground_height;
+			components_physics[i].velocity.y = -components_jumpers[i].jump_force;
 		}
 	}
 }
 
 void update_shakers(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !component_data_shakers[i].active) {
+		if (!entity_is_alive(i) || !components_shakers[i].active) {
 			return;
 		}
-		if (component_data_physics[i].velocity.x >= 0) {
-			component_data_physics[i].velocity.x = -component_data_shakers[i].shake_speed;
+		if (components_physics[i].velocity.x >= 0) {
+			components_physics[i].velocity.x = -components_shakers[i].shake_speed;
 		} else {
-			component_data_physics[i].velocity.x = component_data_shakers[i].shake_speed;
+			components_physics[i].velocity.x = components_shakers[i].shake_speed;
 		}
 	}
 }
 
 void update_physics(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !component_data_physics[i].active) {
+		if (!entity_is_alive(i) || !components_physics[i].active) {
 			return;
 		}
 		// Add gravity
-		component_data_physics[i].velocity.x += component_data_physics[i].gravity.x * delta;
-		component_data_physics[i].velocity.y += component_data_physics[i].gravity.y * delta;
+		components_physics[i].velocity.x += components_physics[i].gravity.x * delta;
+		components_physics[i].velocity.y += components_physics[i].gravity.y * delta;
 
 		// Update position
-		component_data_physics[i].position.x += component_data_physics[i].velocity.x * delta;
-		component_data_physics[i].position.y += component_data_physics[i].velocity.y * delta;
+		components_physics[i].position.x += components_physics[i].velocity.x * delta;
+		components_physics[i].position.y += components_physics[i].velocity.y * delta;
 	}
 }
 
 void update_lifetime(float delta) {
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !component_data_lifetimes[i].active) {
+		if (!entity_is_alive(i) || !components_lifetimes[i].active) {
 			return;
 		}
-		if (component_data_lifetimes[i].lifetime <= 0) {
+		if (components_lifetimes[i].lifetime <= 0) {
 			entity_set_dead(i);
 			return;
 		}
-		component_data_lifetimes[i].lifetime -= delta;
+		components_lifetimes[i].lifetime -= delta;
 	}
 }
 
@@ -109,12 +107,11 @@ int main(void) {
 		printf("Entity initialization failed\n");
 		return 1;
 	}
-
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		component_data_physics[i] = test_physics;
-		component_data_jumpers[i] = test_jumper;
-		component_data_shakers[i] = test_shaker;
-		component_data_lifetimes[i] = test_lifetime;
+		components_physics[i] = test_physics;
+		components_jumpers[i] = test_jumper;
+		components_shakers[i] = test_shaker;
+		components_lifetimes[i] = test_lifetime;
 		entity_set_alive(i);
 	}
 

@@ -1,5 +1,5 @@
-#ifndef _COMPONENTS_H
-#define _COMPONENTS_H
+#ifndef COMPONENT_H
+#define COMPONENT_H
 
 #include <stdbool.h>
 #include "util.h"
