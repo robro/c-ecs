@@ -3,6 +3,8 @@
 #include <time.h>
 #include <stdbool.h>
 
+#include "components.h"
+
 #define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
 #define FRAMES 100
@@ -28,131 +30,15 @@ float timespec_to_secs(const struct timespec *time) {
 	return time->tv_sec + (float)time->tv_nsec / NSECS_IN_SEC;
 }
 
-struct Vec2 {
-	float x;
-	float y;
-};
-
 #define VEC_ZERO (struct Vec2){0, 0}
 #define GRAVITY (struct Vec2){0, 9.8}
 
 /* ==== COMPONENTS ================================== */
 
-struct Component {
-	struct ComponentInterface *vtable;
-};
-
-struct ComponentInterface {
-	void (*array_insert)(const struct Component *, uint);
-};
-
-struct ComponentDataPhysics {
-	struct Vec2 position;
-	struct Vec2 velocity;
-	struct Vec2 gravity;
-	bool active;
-};
-
-struct ComponentPhysics {
-	struct Component base;
-	struct ComponentDataPhysics data;
-};
-
-struct ComponentDataJumper {
-	float jump_force;
-	float ground_height;
-	bool active;
-};
-
-struct ComponentJumper {
-	struct Component base;
-	struct ComponentDataJumper data;
-};
-
-struct ComponentDataShaker {
-	float shake_speed;
-	bool active;
-};
-
-struct ComponentShaker {
-	struct Component base;
-	struct ComponentDataShaker data;
-};
-
-struct ComponentDataLifetime {
-	float lifetime;
-	bool active;
-};
-
-struct ComponentLifetime {
-	struct Component base;
-	struct ComponentDataLifetime data;
-};
-
 struct ComponentDataPhysics component_data_physics[MAX_ENTITIES];
 struct ComponentDataJumper component_data_jumpers[MAX_ENTITIES];
 struct ComponentDataShaker component_data_shakers[MAX_ENTITIES];
 struct ComponentDataLifetime component_data_lifetimes[MAX_ENTITIES];
-
-void component_array_insert(const struct Component *component, uint index) {
-	component->vtable->array_insert(component, index);
-}
-
-void component_array_insert_physics(const struct Component *component, uint index) {
-	component_data_physics[index] = ((struct ComponentPhysics *)component)->data;
-}
-
-void component_array_insert_jumper(const struct Component *component, uint index) {
-	component_data_jumpers[index] = ((struct ComponentJumper *)component)->data;
-}
-
-void component_array_insert_shaker(const struct Component *component, uint index) {
-	component_data_shakers[index] = ((struct ComponentShaker *)component)->data;
-}
-
-void component_array_insert_lifetime(const struct Component *component, uint index) {
-	component_data_lifetimes[index] = ((struct ComponentLifetime *)component)->data;
-}
-
-struct Component* component_get_physics(const struct ComponentDataPhysics *data) {
-	static struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_physics
-	};
-	struct ComponentPhysics *c_physics = malloc(sizeof(struct ComponentPhysics));
-	c_physics->base.vtable = &vtable;
-	c_physics->data = *data;
-	return (struct Component *)c_physics;
-}
-
-struct Component* component_get_jumper(const struct ComponentDataJumper *data) {
-	static struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_jumper
-	};
-	struct ComponentJumper *c_jumper = malloc(sizeof(struct ComponentJumper));
-	c_jumper->base.vtable = &vtable;
-	c_jumper->data = *data;
-	return (struct Component *)c_jumper;
-}
-
-struct Component* component_get_shaker(const struct ComponentDataShaker *data) {
-	static struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_shaker
-	};
-	struct ComponentShaker *c_shaker = malloc(sizeof(struct ComponentJumper));
-	c_shaker->base.vtable = &vtable;
-	c_shaker->data = *data;
-	return (struct Component *)c_shaker;
-}
-
-struct Component* component_get_lifetime(const struct ComponentDataLifetime *data) {
-	static struct ComponentInterface vtable = {
-		.array_insert = component_array_insert_lifetime
-	};
-	struct ComponentLifetime *c_lifetime = malloc(sizeof(struct ComponentLifetime));
-	c_lifetime->base.vtable = &vtable;
-	c_lifetime->data = *data;
-	return (struct Component *)c_lifetime;
-}
 
 const struct ComponentDataPhysics test_physics = {.position = VEC_ZERO, .velocity = VEC_ZERO, .gravity = GRAVITY, .active = true};
 const struct ComponentDataJumper test_jumper = {.jump_force = 69, .ground_height = 420, .active = true};
@@ -280,10 +166,10 @@ const size_t update_funcs_count = array_length(update_funcs);
 
 int main(void) {
 	const struct Component *test_components[] = {
-		component_get_physics(&test_physics),
-		component_get_jumper(&test_jumper),
-		component_get_shaker(&test_shaker),
-		component_get_lifetime(&test_lifetime),
+		component_get_physics(&test_physics, component_data_physics),
+		component_get_jumper(&test_jumper, component_data_jumpers),
+		component_get_shaker(&test_shaker, component_data_shakers),
+		component_get_lifetime(&test_lifetime, component_data_lifetimes),
 		NULL
 	};
 
