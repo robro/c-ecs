@@ -114,7 +114,10 @@ int main(void) {
 		NULL
 	};
 
-	entity_initialize_entities(MAX_ENTITIES);
+	if (!entity_initialize_entities(MAX_ENTITIES)) {
+		printf("Entity initialization failed\n");
+		return 1;
+	}
 
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_create(test_components);

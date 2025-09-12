@@ -21,6 +21,9 @@ struct Component* component_get_physics(const struct ComponentDataPhysics *data,
 		.array_insert = component_array_insert_physics
 	};
 	struct ComponentPhysics *c_physics = malloc(sizeof(struct ComponentPhysics));
+	if (c_physics == NULL) {
+		return NULL;
+	}
 	c_physics->base.vtable = &vtable;
 	c_physics->data = *data;
 	c_physics->array = array;
@@ -32,6 +35,9 @@ struct Component* component_get_jumper(const struct ComponentDataJumper *data, s
 		.array_insert = component_array_insert_jumper
 	};
 	struct ComponentJumper *c_jumper = malloc(sizeof(struct ComponentJumper));
+	if (c_jumper == NULL) {
+		return NULL;
+	}
 	c_jumper->base.vtable = &vtable;
 	c_jumper->data = *data;
 	c_jumper->array = array;
@@ -43,6 +49,9 @@ struct Component* component_get_shaker(const struct ComponentDataShaker *data, s
 		.array_insert = component_array_insert_shaker
 	};
 	struct ComponentShaker *c_shaker = malloc(sizeof(struct ComponentShaker));
+	if (c_shaker == NULL) {
+		return NULL;
+	}
 	c_shaker->base.vtable = &vtable;
 	c_shaker->data = *data;
 	c_shaker->array = array;
@@ -54,6 +63,9 @@ struct Component* component_get_lifetime(const struct ComponentDataLifetime *dat
 		.array_insert = component_array_insert_lifetime
 	};
 	struct ComponentLifetime *c_lifetime = malloc(sizeof(struct ComponentLifetime));
+	if (c_lifetime == NULL) {
+		return NULL;
+	}
 	c_lifetime->base.vtable = &vtable;
 	c_lifetime->data = *data;
 	c_lifetime->array = array;

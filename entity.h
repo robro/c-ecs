@@ -2,9 +2,10 @@
 #define _ENTITY_H
 
 #include <sys/types.h>
+#include <stdbool.h>
 #include "component.h"
 
-void entity_initialize_entities(uint size);
+bool entity_initialize_entities(uint size);
 
 int entity_get_free_index();
 

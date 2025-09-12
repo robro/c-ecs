@@ -1,5 +1,4 @@
 #include <stdlib.h>
-#include <stdbool.h>
 #include "entity.h"
 
 struct Entities {
@@ -11,14 +10,18 @@ struct Entities {
 
 struct Entities entities;
 
-void entity_initialize_entities(uint size) {
+bool entity_initialize_entities(uint size) {
 	if (entities.initialized) {
-		return;
+		return true;
 	}
 	entities.size = size;
 	entities.last_free_index = -1;
 	entities.alive = calloc(size, sizeof(bool));
+	if (entities.alive == NULL) {
+		return false;
+	}
 	entities.initialized = true;
+	return true;
 }
 
 int entity_get_free_index() {
