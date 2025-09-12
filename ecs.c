@@ -9,7 +9,6 @@
 #define TARGET_FPS 60
 #define FRAMES 100
 
-#define VEC_ZERO (struct Vec2){0, 0}
 #define GRAVITY (struct Vec2){0, 9.8}
 
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
