@@ -1,91 +1,204 @@
-#include <stdio.h>
-#include <time.h>
-#include "system.h"
+#include <stdlib.h>
 
-#define MAX_ENTITIES 1000000
-#define TARGET_FPS 60
-#define FRAMES 100
+#include "ecs.h"
 
-#define GRAVITY (struct Vec2){0, 9.8}
-#define SECS_PER_FRAME (1.0 / TARGET_FPS)
+struct ComponentPhysics *components_physics;
+struct ComponentJumper *components_jumpers;
+struct ComponentShaker *components_shakers;
+struct ComponentLifetime *components_lifetimes;
 
-const struct Component test_physics = {
-	.type = CT_PHYSICS,
-	.physics = {
-		.position = VEC_ZERO,
-		.velocity = VEC_ZERO,
-		.gravity = GRAVITY,
-		.active = true,
+bool component_allocate_components(uint size) {
+	components_physics = calloc(size, sizeof(struct ComponentPhysics));
+	if (!components_physics) {
+		return false;
 	}
-};
-const struct Component test_jumper = {
-	.type = CT_JUMPER,
-	.jumper = {
-		.jump_force = 69,
-		.ground_height = 420,
-		.active = true
+	components_jumpers = calloc(size, sizeof(struct ComponentJumper));
+	if (!components_jumpers) {
+		return false;
 	}
-};
-const struct Component test_shaker = {
-	.type = CT_SHAKER,
-	.shaker = {
-		.shake_speed = 69,
-		.active = true
+	components_shakers = calloc(size, sizeof(struct ComponentShaker));
+	if (!components_shakers) {
+		return false;
 	}
-};
-const struct Component test_lifetime = {
-	.type = CT_LIFETIME,
-	.lifetime = {
-		.lifetime = 1,
-		.active = true
+	components_lifetimes = calloc(size, sizeof(struct ComponentLifetime));
+	if (!components_lifetimes) {
+		return false;
 	}
+	return true;
+}
+
+void component_add_physics(const struct ComponentPhysics *data, uint index) {
+	if (components_physics) {
+		components_physics[index] = *data;
+	}
+}
+
+void component_add_jumper(const struct ComponentJumper *data, uint index) {
+	if (components_jumpers) {
+		components_jumpers[index] = *data;
+	}
+}
+
+void component_add_shaker(const struct ComponentShaker *data, uint index) {
+	if (components_shakers) {
+		components_shakers[index] = *data;
+	}
+}
+
+void component_add_lifetime(const struct ComponentLifetime *data, uint index) {
+	if (components_lifetimes) {
+		components_lifetimes[index] = *data;
+	}
+}
+
+struct Entities {
+	bool *alive;
+	uint size;
+	uint last_free_index;
+	bool initialized;
 };
 
-const struct Component *test_entity[] = {
-	&test_physics,
-	&test_jumper,
-	&test_shaker,
-	&test_lifetime,
+struct Entities entities;
+
+bool entity_initialize_entities(uint size) {
+	if (entities.initialized || size == 0) {
+		return false;
+	}
+	entities.alive = calloc(size, sizeof(bool));
+	if (entities.alive == NULL) {
+		return false;
+	}
+	entities.size = size;
+	entities.last_free_index = 0;
+	entities.initialized = true;
+	return true;
+}
+
+int entity_get_free_index() {
+	if (!entities.initialized) {
+		return -1;
+	}
+	uint i = entities.last_free_index;
+	while (entities.alive[i]) {
+		i++;
+		i %= entities.size;
+		if (i == entities.last_free_index) {
+			return -1;
+		}
+	}
+	entities.last_free_index = i;
+	return entities.last_free_index;
+}
+
+void entity_set_alive(uint index) {
+	if (!entities.initialized) {
+		return;
+	}
+	if (index < entities.size) {
+		entities.alive[index] = true;
+	}
+}
+
+void entity_set_dead(uint index) {
+	if (!entities.initialized) {
+		return;
+	}
+	if (index < entities.size) {
+		entities.alive[index] = false;
+	}
+}
+
+bool entity_is_alive(uint index) {
+	if (!entities.initialized || index >= entities.size) {
+		return false;
+	}
+	return entities.alive[index];
+}
+
+bool entity_add(const struct Component **components) {
+	int entity_index = entity_get_free_index();
+	if (entity_index < 0) {
+		return false;
+	}
+	for (int i = 0; components[i]; ++i) {
+		switch (components[i]->type) {
+		case CT_NONE:
+			break;
+		case CT_PHYSICS:
+			component_add_physics(&components[i]->physics, entity_index);
+			break;
+		case CT_JUMPER:
+			component_add_jumper(&components[i]->jumper, entity_index);
+			break;
+		case CT_SHAKER:
+			component_add_shaker(&components[i]->shaker, entity_index);
+			break;
+		case CT_LIFETIME:
+			component_add_lifetime(&components[i]->lifetime, entity_index);
+			break;
+		}
+	}
+	entity_set_alive(entity_index);
+	return true;
+}
+
+void update_jumpers(float delta) {
+	for (int i = 0; i < entities.size; ++i) {
+		if (!entity_is_alive(i) || !components_jumpers[i].active) {
+			return;
+		}
+		if (components_physics[i].position.y >= components_jumpers[i].ground_height) {
+			components_physics[i].position.y = components_jumpers[i].ground_height;
+			components_physics[i].velocity.y = -components_jumpers[i].jump_force;
+		}
+	}
+}
+
+void update_shakers(float delta) {
+	for (int i = 0; i < entities.size; ++i) {
+		if (!entity_is_alive(i) || !components_shakers[i].active) {
+			return;
+		}
+		if (components_physics[i].velocity.x >= 0) {
+			components_physics[i].velocity.x = -components_shakers[i].shake_speed;
+		} else {
+			components_physics[i].velocity.x = components_shakers[i].shake_speed;
+		}
+	}
+}
+
+void update_physics(float delta) {
+	for (int i = 0; i < entities.size; ++i) {
+		if (!entity_is_alive(i) || !components_physics[i].active) {
+			return;
+		}
+		// Add gravity
+		components_physics[i].velocity.x += components_physics[i].gravity.x * delta;
+		components_physics[i].velocity.y += components_physics[i].gravity.y * delta;
+
+		// Update position
+		components_physics[i].position.x += components_physics[i].velocity.x * delta;
+		components_physics[i].position.y += components_physics[i].velocity.y * delta;
+	}
+}
+
+void update_lifetime(float delta) {
+	for (int i = 0; i < entities.size; ++i) {
+		if (!entity_is_alive(i) || !components_lifetimes[i].active) {
+			return;
+		}
+		if (components_lifetimes[i].lifetime <= 0) {
+			entity_set_dead(i);
+			return;
+		}
+		components_lifetimes[i].lifetime -= delta;
+	}
+}
+
+const UpdateFunc update_funcs[] = {
+	update_jumpers,
+	update_shakers,
+	update_physics,
+	update_lifetime,
 	NULL
 };
-
-int main(void) {
-	if (!component_initialize_components(MAX_ENTITIES)) {
-		printf("Components initialization failed\n");
-		return 1;
-	};
-	if (!entity_initialize_entities(MAX_ENTITIES)) {
-		printf("Entity initialization failed\n");
-		return 1;
-	}
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_add(test_entity);
-	}
-
-	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
-	const struct timespec target_frame_time = {.tv_sec = 0, .tv_nsec = NSECS_IN_SEC / TARGET_FPS};
-
-	// Game Loop
-	for (int i = 0; i < FRAMES; ++i) {
-		clock_gettime(CLOCK_MONOTONIC, &time_start);
-		for (int j = 0; update_funcs[j]; ++j) {
-			update_funcs[j](SECS_PER_FRAME);
-		}
-		clock_gettime(CLOCK_MONOTONIC, &time_end);
-		work_time = timespec_diff(&time_end, &time_start);
-		sleep_time = timespec_diff(&target_frame_time, &work_time);
-		if (sleep_time.tv_sec >= 0 && sleep_time.tv_nsec > 0) {
-			nanosleep(&sleep_time, NULL);
-		}
-		clock_gettime(CLOCK_MONOTONIC, &time_end);
-		frame_time = timespec_diff(&time_end, &time_start);
-		printf(
-			"Frame: %d | Work time: %lf secs | Frame time: %lf secs\n",
-			i + 1,
-			timespec_to_secs(&work_time),
-			timespec_to_secs(&frame_time)
-		);
-	}
-
-	return 0;
-}
