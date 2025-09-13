@@ -44,10 +44,12 @@ struct Component {
 	};
 };
 
-void component_set_physics_array(struct ComponentPhysics *array);
-void component_set_jumper_array(struct ComponentJumper *array);
-void component_set_shaker_array(struct ComponentShaker *array);
-void component_set_lifetime_array(struct ComponentLifetime *array);
+extern struct ComponentPhysics *components_physics;
+extern struct ComponentJumper *components_jumpers;
+extern struct ComponentShaker *components_shakers;
+extern struct ComponentLifetime *components_lifetimes;
+
+bool component_initialize_components(uint size);
 
 void component_add_physics(const struct ComponentPhysics *data, uint index);
 void component_add_jumper(const struct ComponentJumper *data, uint index);

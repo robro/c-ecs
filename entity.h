@@ -5,6 +5,15 @@
 #include <stdbool.h>
 #include "component.h"
 
+struct Entities {
+	bool *alive;
+	uint size;
+	uint last_free_index;
+	bool initialized;
+};
+
+extern struct Entities entities;
+
 bool entity_initialize_entities(uint size);
 
 int entity_get_free_index();

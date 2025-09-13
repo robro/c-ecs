@@ -2,6 +2,7 @@
 #include <time.h>
 #include "component.h"
 #include "entity.h"
+#include "system.h"
 
 #define MAX_ENTITIES 1000000
 #define TARGET_FPS 60
@@ -54,85 +55,15 @@ const struct Component *test_entity[] = {
 };
 
 /* ==== SYSTEMS ==================================== */
-
-struct ComponentPhysics components_physics[MAX_ENTITIES];
-struct ComponentJumper components_jumpers[MAX_ENTITIES];
-struct ComponentShaker components_shakers[MAX_ENTITIES];
-struct ComponentLifetime components_lifetimes[MAX_ENTITIES];
-
-void update_jumpers(float delta) {
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !components_jumpers[i].active) {
-			return;
-		}
-		if (components_physics[i].position.y >= components_jumpers[i].ground_height) {
-			components_physics[i].position.y = components_jumpers[i].ground_height;
-			components_physics[i].velocity.y = -components_jumpers[i].jump_force;
-		}
-	}
-}
-
-void update_shakers(float delta) {
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !components_shakers[i].active) {
-			return;
-		}
-		if (components_physics[i].velocity.x >= 0) {
-			components_physics[i].velocity.x = -components_shakers[i].shake_speed;
-		} else {
-			components_physics[i].velocity.x = components_shakers[i].shake_speed;
-		}
-	}
-}
-
-void update_physics(float delta) {
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !components_physics[i].active) {
-			return;
-		}
-		// Add gravity
-		components_physics[i].velocity.x += components_physics[i].gravity.x * delta;
-		components_physics[i].velocity.y += components_physics[i].gravity.y * delta;
-
-		// Update position
-		components_physics[i].position.x += components_physics[i].velocity.x * delta;
-		components_physics[i].position.y += components_physics[i].velocity.y * delta;
-	}
-}
-
-void update_lifetime(float delta) {
-	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		if (!entity_is_alive(i) || !components_lifetimes[i].active) {
-			return;
-		}
-		if (components_lifetimes[i].lifetime <= 0) {
-			entity_set_dead(i);
-			return;
-		}
-		components_lifetimes[i].lifetime -= delta;
-	}
-}
-
-typedef void (*UpdateFunc)(float);
-const UpdateFunc update_funcs[] = {
-	update_jumpers,
-	update_shakers,
-	update_physics,
-	update_lifetime,
-	NULL
-};
-
 int main(void) {
+	if (!component_initialize_components(MAX_ENTITIES)) {
+		printf("Components initialization failed\n");
+		return 1;
+	};
 	if (!entity_initialize_entities(MAX_ENTITIES)) {
 		printf("Entity initialization failed\n");
 		return 1;
 	}
-
-	component_set_physics_array(components_physics);
-	component_set_jumper_array(components_jumpers);
-	component_set_shaker_array(components_shakers);
-	component_set_lifetime_array(components_lifetimes);
-	
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_add(test_entity);
 	}

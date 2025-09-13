@@ -1,13 +1,6 @@
 #include <stdlib.h>
 #include "entity.h"
 
-struct Entities {
-	bool *alive;
-	uint size;
-	uint last_free_index;
-	bool initialized;
-};
-
 struct Entities entities;
 
 bool entity_initialize_entities(uint size) {
