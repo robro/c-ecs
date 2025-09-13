@@ -43,30 +43,6 @@ bool component_allocate_components(uint size) {
 	return true;
 }
 
-void component_add_physics(const struct ComponentPhysics *data, uint index) {
-	if (components_physics) {
-		components_physics[index] = *data;
-	}
-}
-
-void component_add_jumper(const struct ComponentJumper *data, uint index) {
-	if (components_jumpers) {
-		components_jumpers[index] = *data;
-	}
-}
-
-void component_add_shaker(const struct ComponentShaker *data, uint index) {
-	if (components_shakers) {
-		components_shakers[index] = *data;
-	}
-}
-
-void component_add_lifetime(const struct ComponentLifetime *data, uint index) {
-	if (components_lifetimes) {
-		components_lifetimes[index] = *data;
-	}
-}
-
 struct Entities {
 	bool *alive;
 	uint size;
@@ -146,16 +122,16 @@ bool entity_add(const struct Component **components) {
 		case CT_NONE:
 			break;
 		case CT_PHYSICS:
-			component_add_physics(&components[i]->physics, entity_index);
+			components_physics[entity_index] = components[i]->physics;
 			break;
 		case CT_JUMPER:
-			component_add_jumper(&components[i]->jumper, entity_index);
+			components_jumpers[entity_index] = components[i]->jumper;
 			break;
 		case CT_SHAKER:
-			component_add_shaker(&components[i]->shaker, entity_index);
+			components_shakers[entity_index] = components[i]->shaker;
 			break;
 		case CT_LIFETIME:
-			component_add_lifetime(&components[i]->lifetime, entity_index);
+			components_lifetimes[entity_index] = components[i]->lifetime;
 			break;
 		}
 	}
