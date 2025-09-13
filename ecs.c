@@ -77,7 +77,7 @@ struct Entities {
 struct Entities entities;
 
 bool entity_initialize_entities(uint size) {
-	if (entities.initialized || size == 0) {
+	if (entities.initialized) {
 		return false;
 	}
 	entities.alive = calloc(size, sizeof(bool));
@@ -225,6 +225,9 @@ const UpdateFunc update_funcs[] = {
 };
 
 bool ecs_initialize(uint size) {
+	if (size == 0) {
+		return false;
+	}
 	if (!entity_initialize_entities(size)) {
 		return false;
 	}
