@@ -7,10 +7,7 @@
 #define FRAMES 100
 
 #define GRAVITY (struct Vec2){0, 9.8}
-
 #define SECS_PER_FRAME (1.0 / TARGET_FPS)
-
-/* ==== COMPONENTS ================================== */
 
 const struct Component test_physics = {
 	.type = CT_PHYSICS,
@@ -52,7 +49,6 @@ const struct Component *test_entity[] = {
 	NULL
 };
 
-/* ==== SYSTEMS ==================================== */
 int main(void) {
 	if (!component_initialize_components(MAX_ENTITIES)) {
 		printf("Components initialization failed\n");
