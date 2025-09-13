@@ -13,24 +13,44 @@
 
 /* ==== COMPONENTS ================================== */
 
-const struct ComponentPhysics test_physics = {
-	.position = VEC_ZERO,
-	.velocity = VEC_ZERO,
-	.gravity = GRAVITY,
-	.active = true
+const struct Component test_physics = {
+	.type = CT_PHYSICS,
+	.physics = {
+		.position = VEC_ZERO,
+		.velocity = VEC_ZERO,
+		.gravity = GRAVITY,
+		.active = true,
+	}
 };
-const struct ComponentJumper test_jumper = {
-	.jump_force = 69,
-	.ground_height = 420,
-	.active = true
+const struct Component test_jumper = {
+	.type = CT_JUMPER,
+	.jumper = {
+		.jump_force = 69,
+		.ground_height = 420,
+		.active = true
+	}
 };
-const struct ComponentShaker test_shaker = {
-	.shake_speed = 69,
-	.active = true
+const struct Component test_shaker = {
+	.type = CT_SHAKER,
+	.shaker = {
+		.shake_speed = 69,
+		.active = true
+	}
 };
-const struct ComponentLifetime test_lifetime = {
-	.lifetime = 1,
-	.active = true
+const struct Component test_lifetime = {
+	.type = CT_LIFETIME,
+	.lifetime = {
+		.lifetime = 1,
+		.active = true
+	}
+};
+
+const struct Component *test_entity[] = {
+	&test_physics,
+	&test_jumper,
+	&test_shaker,
+	&test_lifetime,
+	NULL
 };
 
 /* ==== SYSTEMS ==================================== */
@@ -107,12 +127,14 @@ int main(void) {
 		printf("Entity initialization failed\n");
 		return 1;
 	}
+
+	component_set_physics_array(components_physics);
+	component_set_jumper_array(components_jumpers);
+	component_set_shaker_array(components_shakers);
+	component_set_lifetime_array(components_lifetimes);
+	
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		components_physics[i] = test_physics;
-		components_jumpers[i] = test_jumper;
-		components_shakers[i] = test_shaker;
-		components_lifetimes[i] = test_lifetime;
-		entity_set_alive(i);
+		entity_add(test_entity);
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
