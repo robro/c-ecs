@@ -1,3 +1,4 @@
+#include <string.h>
 #include <stdlib.h>
 
 #include "ecs.h"
@@ -87,6 +88,11 @@ bool entity_initialize_entities(uint size) {
 	entities.last_free_index = 0;
 	entities.initialized = true;
 	return true;
+}
+
+void entity_free_entities() {
+	free(entities.alive);
+	memset(&entities, 0, sizeof(struct Entities));
 }
 
 int entity_get_free_index() {
@@ -217,3 +223,14 @@ const UpdateFunc update_funcs[] = {
 	update_lifetime,
 	NULL
 };
+
+bool ecs_initialize(uint size) {
+	if (!entity_initialize_entities(size)) {
+		return false;
+	}
+	if (!component_allocate_components(size)) {
+		entity_free_entities();
+		return false;
+	}
+	return true;
+}

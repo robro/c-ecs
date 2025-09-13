@@ -51,14 +51,10 @@ const struct Component *test_entity[] = {
 };
 
 int main(void) {
-	if (!component_allocate_components(MAX_ENTITIES)) {
-		printf("Components initialization failed\n");
+	if (!ecs_initialize(MAX_ENTITIES)) {
+		printf("ECS initialization failed\n");
 		return 1;
 	};
-	if (!entity_initialize_entities(MAX_ENTITIES)) {
-		printf("Entity initialization failed\n");
-		return 1;
-	}
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
 		entity_add(test_entity);
 	}
