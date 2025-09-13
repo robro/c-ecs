@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <time.h>
-#include "component.h"
-#include "entity.h"
 #include "system.h"
 
 #define MAX_ENTITIES 1000000
