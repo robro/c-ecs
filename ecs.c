@@ -7,21 +7,36 @@ struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
+void component_free_components() {
+	free(components_physics);
+	free(components_jumpers);
+	free(components_shakers);
+	free(components_lifetimes);
+	components_physics = NULL;
+	components_jumpers = NULL;
+	components_shakers = NULL;
+	components_lifetimes = NULL;
+}
+
 bool component_allocate_components(uint size) {
 	components_physics = calloc(size, sizeof(struct ComponentPhysics));
 	if (!components_physics) {
+		component_free_components();
 		return false;
 	}
 	components_jumpers = calloc(size, sizeof(struct ComponentJumper));
 	if (!components_jumpers) {
+		component_free_components();
 		return false;
 	}
 	components_shakers = calloc(size, sizeof(struct ComponentShaker));
 	if (!components_shakers) {
+		component_free_components();
 		return false;
 	}
 	components_lifetimes = calloc(size, sizeof(struct ComponentLifetime));
 	if (!components_lifetimes) {
+		component_free_components();
 		return false;
 	}
 	return true;
