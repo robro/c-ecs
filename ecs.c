@@ -12,6 +12,69 @@ struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
+bool *temp_entities_alive;
+
+struct ComponentPhysics *temp_components_physics;
+struct ComponentJumper *temp_components_jumpers;
+struct ComponentShaker *temp_components_shakers;
+struct ComponentLifetime *temp_components_lifetimes;
+
+void free_array(void **array) {
+	for (int i = 0; array[i]; ++i) {
+		if (!array[i]) {
+			continue;
+		}
+		free(array[i]);
+		array[i] = NULL;
+	}
+}
+
+bool ecs_allocate(uint size) {
+	void *temp_arrays[] = {
+		temp_entities_alive,
+		temp_components_physics,
+		temp_components_jumpers,
+		temp_components_shakers,
+		temp_components_lifetimes,
+	};
+	temp_entities_alive = calloc(size, sizeof(*entities_alive));
+	if (!temp_entities_alive) {
+		return false;
+	}
+	temp_components_physics = calloc(size, sizeof(*temp_components_physics));
+	if (!temp_components_physics) {
+		free_array(temp_arrays);
+		return false;
+	}
+	temp_components_jumpers = calloc(size, sizeof(*temp_components_jumpers));
+	if (!temp_components_jumpers) {
+		free_array(temp_arrays);
+		return false;
+	}
+	temp_components_shakers = calloc(size, sizeof(*temp_components_shakers));
+	if (!temp_components_shakers) {
+		free_array(temp_arrays);
+		return false;
+	}
+	temp_components_lifetimes = calloc(size, sizeof(*temp_components_lifetimes));
+	if (!temp_components_lifetimes) {
+		free_array(temp_arrays);
+		return false;
+	}
+	ecs_free();
+	entities_alive = temp_entities_alive;
+	components_physics = temp_components_physics;
+	components_jumpers = temp_components_jumpers;
+	components_shakers = temp_components_shakers;
+	components_lifetimes = temp_components_lifetimes;
+	return true;
+}
+
+void free_entities() {
+	free(entities_alive);
+	entities_alive = NULL;
+}
+
 void free_components() {
 	free(components_physics);
 	free(components_jumpers);
@@ -21,43 +84,6 @@ void free_components() {
 	components_jumpers = NULL;
 	components_shakers = NULL;
 	components_lifetimes = NULL;
-}
-
-bool allocate_components(uint size) {
-	components_physics = calloc(size, sizeof(struct ComponentPhysics));
-	if (!components_physics) {
-		free_components();
-		return false;
-	}
-	components_jumpers = calloc(size, sizeof(struct ComponentJumper));
-	if (!components_jumpers) {
-		free_components();
-		return false;
-	}
-	components_shakers = calloc(size, sizeof(struct ComponentShaker));
-	if (!components_shakers) {
-		free_components();
-		return false;
-	}
-	components_lifetimes = calloc(size, sizeof(struct ComponentLifetime));
-	if (!components_lifetimes) {
-		free_components();
-		return false;
-	}
-	return true;
-}
-
-bool allocate_entities(uint size) {
-	entities_alive = calloc(size, sizeof(*entities_alive));
-	if (!entities_alive) {
-		return false;
-	}
-	return true;
-}
-
-void free_entities() {
-	free(entities_alive);
-	entities_alive = NULL;
 }
 
 int entity_get_free_index() {
@@ -168,15 +194,7 @@ bool ecs_initialize(uint size) {
 	if (size == 0) {
 		return false;
 	}
-	// TODO: don't affect the state of the ecs if allocation fails
-	if (initialized) {
-		ecs_free();
-	}
-	if (!allocate_entities(size)) {
-		return false;
-	}
-	if (!allocate_components(size)) {
-		free_entities();
+	if (!ecs_allocate(size)) {
 		return false;
 	}
 	ecs_size = size;
