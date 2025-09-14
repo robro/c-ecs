@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "ecs.h"
 
 uint pool_size;
@@ -13,38 +11,38 @@ struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
 bool ecs_allocate(uint size) {
-	void *arrays[5] = {};
-	arrays[0] = calloc(size, sizeof(*entities_alive));
-	if (arrays[0] == NULL) {
-		free_multiple(arrays, array_size(arrays));
+	void *allocs[5] = {};
+	allocs[0] = calloc(size, sizeof(*entities_alive));
+	if (allocs[0] == NULL) {
+		free_multiple(allocs, array_size(allocs));
 		return false;
 	}
-	arrays[1] = calloc(size, sizeof(*components_physics));
-	if (arrays[1] == NULL) {
-		free_multiple(arrays, array_size(arrays));
+	allocs[1] = calloc(size, sizeof(*components_physics));
+	if (allocs[1] == NULL) {
+		free_multiple(allocs, array_size(allocs));
 		return false;
 	}
-	arrays[2] = calloc(size, sizeof(*components_jumpers));
-	if (arrays[2] == NULL) {
-		free_multiple(arrays, array_size(arrays));
+	allocs[2] = calloc(size, sizeof(*components_jumpers));
+	if (allocs[2] == NULL) {
+		free_multiple(allocs, array_size(allocs));
 		return false;
 	}
-	arrays[3] = calloc(size, sizeof(*components_shakers));
-	if (arrays[3] == NULL) {
-		free_multiple(arrays, array_size(arrays));
+	allocs[3] = calloc(size, sizeof(*components_shakers));
+	if (allocs[3] == NULL) {
+		free_multiple(allocs, array_size(allocs));
 		return false;
 	}
-	arrays[4] = calloc(size, sizeof(*components_lifetimes));
-	if (arrays[4] == NULL) {
-		free_multiple(arrays, array_size(arrays));
+	allocs[4] = calloc(size, sizeof(*components_lifetimes));
+	if (allocs[4] == NULL) {
+		free_multiple(allocs, array_size(allocs));
 		return false;
 	}
 	ecs_free();
-	entities_alive = arrays[0];
-	components_physics = arrays[1];
-	components_jumpers = arrays[2];
-	components_shakers = arrays[3];
-	components_lifetimes = arrays[4];
+	entities_alive = allocs[0];
+	components_physics = allocs[1];
+	components_jumpers = allocs[2];
+	components_shakers = allocs[3];
+	components_lifetimes = allocs[4];
 	return true;
 }
 
