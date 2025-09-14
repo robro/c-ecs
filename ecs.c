@@ -36,6 +36,7 @@ bool ecs_allocate(uint size) {
 		temp_components_jumpers,
 		temp_components_shakers,
 		temp_components_lifetimes,
+		NULL
 	};
 	temp_entities_alive = calloc(size, sizeof(*entities_alive));
 	if (!temp_entities_alive) {
@@ -70,20 +71,16 @@ bool ecs_allocate(uint size) {
 	return true;
 }
 
-void free_entities() {
-	free(entities_alive);
-	entities_alive = NULL;
-}
-
-void free_components() {
-	free(components_physics);
-	free(components_jumpers);
-	free(components_shakers);
-	free(components_lifetimes);
-	components_physics = NULL;
-	components_jumpers = NULL;
-	components_shakers = NULL;
-	components_lifetimes = NULL;
+void free_arrays() {
+	void *arrays[] = {
+		entities_alive,
+		components_physics,
+		components_jumpers,
+		components_shakers,
+		components_lifetimes,
+		NULL
+	};
+	free_array(arrays);
 }
 
 int entity_get_free_index() {
@@ -240,8 +237,7 @@ void ecs_free(void) {
 	if (!initialized) {
 		return;
 	}
-	free_components();
-	free_entities();
+	free_arrays();
 	ecs_size = 0;
 	last_free_index = 0;
 	initialized = false;

@@ -81,6 +81,6 @@ int main(void) {
 			timespec_to_secs(&frame_time)
 		);
 	}
-
+	ecs_free();
 	return 0;
 }
