@@ -2,6 +2,7 @@
 #define ECS_H
 
 #include <sys/types.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #include "util.h"

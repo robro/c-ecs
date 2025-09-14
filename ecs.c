@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
 #include "ecs.h"
-#include "util.h"
 
 uint pool_size;
 uint last_free_index;
@@ -12,13 +11,6 @@ struct ComponentPhysics *components_physics;
 struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
-
-void free_multiple(void **array, uint size) {
-	for (int i = 0; i < size; ++i) {
-		free(array[i]);
-		array[i] = NULL;
-	}
-}
 
 bool ecs_allocate(uint size) {
 	void *arrays[5] = {};

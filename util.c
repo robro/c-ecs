@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "util.h"
 
 struct timespec timespec_diff(const struct timespec *time_a, const struct timespec *time_b) {
@@ -14,4 +15,11 @@ struct timespec timespec_diff(const struct timespec *time_a, const struct timesp
 
 float timespec_to_secs(const struct timespec *time) {
 	return time->tv_sec + (float)time->tv_nsec / NSECS_IN_SEC;
+}
+
+void free_multiple(void **array, uint size) {
+	for (int i = 0; i < size; ++i) {
+		free(array[i]);
+		array[i] = NULL;
+	}
 }
