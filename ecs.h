@@ -45,18 +45,12 @@ struct Component {
 	};
 };
 
-void entity_set_alive(uint index);
-
-void entity_set_dead(uint index);
-
-bool entity_is_alive(uint index);
-
-bool entity_add(const struct Component **components);
-
-typedef void (*UpdateFunc)(float);
-
-extern const UpdateFunc update_funcs[];
-
 bool ecs_initialize(uint size);
+
+bool ecs_add_entity(const struct Component **components);
+
+void ecs_update(float delta);
+
+void ecs_free(void);
 
 #endif

@@ -1,14 +1,18 @@
-#include <string.h>
 #include <stdlib.h>
 
 #include "ecs.h"
+
+uint ecs_size;
+uint last_free_index;
+bool initialized;
+bool *entities_alive;
 
 struct ComponentPhysics *components_physics;
 struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
-void component_free_components() {
+void free_components() {
 	free(components_physics);
 	free(components_jumpers);
 	free(components_shakers);
@@ -19,100 +23,169 @@ void component_free_components() {
 	components_lifetimes = NULL;
 }
 
-bool component_allocate_components(uint size) {
+bool allocate_components(uint size) {
 	components_physics = calloc(size, sizeof(struct ComponentPhysics));
 	if (!components_physics) {
-		component_free_components();
+		free_components();
 		return false;
 	}
 	components_jumpers = calloc(size, sizeof(struct ComponentJumper));
 	if (!components_jumpers) {
-		component_free_components();
+		free_components();
 		return false;
 	}
 	components_shakers = calloc(size, sizeof(struct ComponentShaker));
 	if (!components_shakers) {
-		component_free_components();
+		free_components();
 		return false;
 	}
 	components_lifetimes = calloc(size, sizeof(struct ComponentLifetime));
 	if (!components_lifetimes) {
-		component_free_components();
+		free_components();
 		return false;
 	}
 	return true;
 }
 
-struct Entities {
-	bool *alive;
-	uint size;
-	uint last_free_index;
-	bool initialized;
-};
-
-struct Entities entities;
-
-bool entity_initialize_entities(uint size) {
-	if (entities.initialized) {
+bool allocate_entities(uint size) {
+	entities_alive = calloc(size, sizeof(*entities_alive));
+	if (!entities_alive) {
 		return false;
 	}
-	entities.alive = calloc(size, sizeof(bool));
-	if (entities.alive == NULL) {
-		return false;
-	}
-	entities.size = size;
-	entities.last_free_index = 0;
-	entities.initialized = true;
 	return true;
 }
 
-void entity_free_entities() {
-	free(entities.alive);
-	memset(&entities, 0, sizeof(struct Entities));
+void free_entities() {
+	free(entities_alive);
+	entities_alive = NULL;
 }
 
 int entity_get_free_index() {
-	if (!entities.initialized) {
+	if (!initialized) {
 		return -1;
 	}
-	uint i = entities.last_free_index;
-	while (entities.alive[i]) {
+	uint i = last_free_index;
+	while (entities_alive[i]) {
 		i++;
-		i %= entities.size;
-		if (i == entities.last_free_index) {
+		i %= ecs_size;
+		if (i == last_free_index) {
 			return -1;
 		}
 	}
-	entities.last_free_index = i;
-	return entities.last_free_index;
+	last_free_index = i;
+	return i;
 }
 
 void entity_set_alive(uint index) {
-	if (!entities.initialized) {
+	if (!initialized) {
 		return;
 	}
-	if (index < entities.size) {
-		entities.alive[index] = true;
+	if (index < ecs_size) {
+		entities_alive[index] = true;
 	}
 }
 
 void entity_set_dead(uint index) {
-	if (!entities.initialized) {
+	if (!initialized) {
 		return;
 	}
-	if (index < entities.size) {
-		entities.alive[index] = false;
+	if (index < ecs_size) {
+		entities_alive[index] = false;
 	}
 }
 
 bool entity_is_alive(uint index) {
-	if (!entities.initialized || index >= entities.size) {
+	if (!initialized || index >= ecs_size) {
 		return false;
 	}
-	return entities.alive[index];
+	return entities_alive[index];
 }
 
-bool entity_add(const struct Component **components) {
+void update_jumpers(float delta) {
+	for (int i = 0; i < ecs_size; ++i) {
+		if (!entity_is_alive(i) || !components_jumpers[i].active) {
+			return;
+		}
+		if (components_physics[i].position.y >= components_jumpers[i].ground_height) {
+			components_physics[i].position.y = components_jumpers[i].ground_height;
+			components_physics[i].velocity.y = -components_jumpers[i].jump_force;
+		}
+	}
+}
+
+void update_shakers(float delta) {
+	for (int i = 0; i < ecs_size; ++i) {
+		if (!entity_is_alive(i) || !components_shakers[i].active) {
+			return;
+		}
+		if (components_physics[i].velocity.x >= 0) {
+			components_physics[i].velocity.x = -components_shakers[i].shake_speed;
+		} else {
+			components_physics[i].velocity.x = components_shakers[i].shake_speed;
+		}
+	}
+}
+
+void update_physics(float delta) {
+	for (int i = 0; i < ecs_size; ++i) {
+		if (!entity_is_alive(i) || !components_physics[i].active) {
+			return;
+		}
+		// Add gravity
+		components_physics[i].velocity.x += components_physics[i].gravity.x * delta;
+		components_physics[i].velocity.y += components_physics[i].gravity.y * delta;
+
+		// Update position
+		components_physics[i].position.x += components_physics[i].velocity.x * delta;
+		components_physics[i].position.y += components_physics[i].velocity.y * delta;
+	}
+}
+
+void update_lifetime(float delta) {
+	for (int i = 0; i < ecs_size; ++i) {
+		if (!entity_is_alive(i) || !components_lifetimes[i].active) {
+			return;
+		}
+		if (components_lifetimes[i].lifetime <= 0) {
+			entity_set_dead(i);
+			return;
+		}
+		components_lifetimes[i].lifetime -= delta;
+	}
+}
+
+typedef void (*UpdateFunc)(float);
+
+const UpdateFunc update_funcs[] = {
+	update_jumpers,
+	update_shakers,
+	update_physics,
+	update_lifetime,
+	NULL
+};
+
+bool ecs_initialize(uint size) {
+	if (size == 0) {
+		return false;
+	}
+	// TODO: don't affect the state of the ecs if allocation fails
+	if (initialized) {
+		ecs_free();
+	}
+	if (!allocate_entities(size)) {
+		return false;
+	}
+	if (!allocate_components(size)) {
+		free_entities();
+		return false;
+	}
+	ecs_size = size;
+	last_free_index = 0;
+	initialized = true;
+	return true;
+}
+
+bool ecs_add_entity(const struct Component **components) {
 	int entity_index = entity_get_free_index();
 	if (entity_index < 0) {
 		return false;
@@ -139,77 +212,19 @@ bool entity_add(const struct Component **components) {
 	return true;
 }
 
-void update_jumpers(float delta) {
-	for (int i = 0; i < entities.size; ++i) {
-		if (!entity_is_alive(i) || !components_jumpers[i].active) {
-			return;
-		}
-		if (components_physics[i].position.y >= components_jumpers[i].ground_height) {
-			components_physics[i].position.y = components_jumpers[i].ground_height;
-			components_physics[i].velocity.y = -components_jumpers[i].jump_force;
-		}
+void ecs_update(float delta) {
+	for (int i = 0; update_funcs[i]; ++i) {
+		update_funcs[i](delta);
 	}
 }
 
-void update_shakers(float delta) {
-	for (int i = 0; i < entities.size; ++i) {
-		if (!entity_is_alive(i) || !components_shakers[i].active) {
-			return;
-		}
-		if (components_physics[i].velocity.x >= 0) {
-			components_physics[i].velocity.x = -components_shakers[i].shake_speed;
-		} else {
-			components_physics[i].velocity.x = components_shakers[i].shake_speed;
-		}
+void ecs_free(void) {
+	if (!initialized) {
+		return;
 	}
-}
-
-void update_physics(float delta) {
-	for (int i = 0; i < entities.size; ++i) {
-		if (!entity_is_alive(i) || !components_physics[i].active) {
-			return;
-		}
-		// Add gravity
-		components_physics[i].velocity.x += components_physics[i].gravity.x * delta;
-		components_physics[i].velocity.y += components_physics[i].gravity.y * delta;
-
-		// Update position
-		components_physics[i].position.x += components_physics[i].velocity.x * delta;
-		components_physics[i].position.y += components_physics[i].velocity.y * delta;
-	}
-}
-
-void update_lifetime(float delta) {
-	for (int i = 0; i < entities.size; ++i) {
-		if (!entity_is_alive(i) || !components_lifetimes[i].active) {
-			return;
-		}
-		if (components_lifetimes[i].lifetime <= 0) {
-			entity_set_dead(i);
-			return;
-		}
-		components_lifetimes[i].lifetime -= delta;
-	}
-}
-
-const UpdateFunc update_funcs[] = {
-	update_jumpers,
-	update_shakers,
-	update_physics,
-	update_lifetime,
-	NULL
-};
-
-bool ecs_initialize(uint size) {
-	if (size == 0) {
-		return false;
-	}
-	if (!entity_initialize_entities(size)) {
-		return false;
-	}
-	if (!component_allocate_components(size)) {
-		entity_free_entities();
-		return false;
-	}
-	return true;
+	free_components();
+	free_entities();
+	ecs_size = 0;
+	last_free_index = 0;
+	initialized = false;
 }

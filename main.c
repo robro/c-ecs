@@ -56,7 +56,7 @@ int main(void) {
 		return 1;
 	};
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		entity_add(test_entity);
+		ecs_add_entity(test_entity);
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;
@@ -65,9 +65,7 @@ int main(void) {
 	// Game Loop
 	for (int i = 0; i < FRAMES; ++i) {
 		clock_gettime(CLOCK_MONOTONIC, &time_start);
-		for (int j = 0; update_funcs[j]; ++j) {
-			update_funcs[j](SECS_PER_FRAME);
-		}
+		ecs_update(SECS_PER_FRAME);
 		clock_gettime(CLOCK_MONOTONIC, &time_end);
 		work_time = timespec_diff(&time_end, &time_start);
 		sleep_time = timespec_diff(&target_frame_time, &work_time);
