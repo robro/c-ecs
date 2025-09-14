@@ -12,13 +12,6 @@ struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
-bool *temp_entities_alive;
-
-struct ComponentPhysics *temp_components_physics;
-struct ComponentJumper *temp_components_jumpers;
-struct ComponentShaker *temp_components_shakers;
-struct ComponentLifetime *temp_components_lifetimes;
-
 void free_array(void **array) {
 	for (int i = 0; array[i]; ++i) {
 		if (!array[i]) {
@@ -30,44 +23,37 @@ void free_array(void **array) {
 }
 
 bool ecs_allocate(uint size) {
-	void *temp_arrays[] = {
-		temp_entities_alive,
-		temp_components_physics,
-		temp_components_jumpers,
-		temp_components_shakers,
-		temp_components_lifetimes,
-		NULL
-	};
-	temp_entities_alive = calloc(size, sizeof(*entities_alive));
-	if (!temp_entities_alive) {
+	void *alloc_ptrs[6] = {};
+	alloc_ptrs[0] = calloc(size, sizeof(*entities_alive));
+	if (!alloc_ptrs[0]) {
 		return false;
 	}
-	temp_components_physics = calloc(size, sizeof(*temp_components_physics));
-	if (!temp_components_physics) {
-		free_array(temp_arrays);
+	alloc_ptrs[1] = calloc(size, sizeof(*components_physics));
+	if (!alloc_ptrs[1]) {
+		free_array(alloc_ptrs);
 		return false;
 	}
-	temp_components_jumpers = calloc(size, sizeof(*temp_components_jumpers));
-	if (!temp_components_jumpers) {
-		free_array(temp_arrays);
+	alloc_ptrs[2] = calloc(size, sizeof(*components_jumpers));
+	if (!alloc_ptrs[2]) {
+		free_array(alloc_ptrs);
 		return false;
 	}
-	temp_components_shakers = calloc(size, sizeof(*temp_components_shakers));
-	if (!temp_components_shakers) {
-		free_array(temp_arrays);
+	alloc_ptrs[3] = calloc(size, sizeof(*components_shakers));
+	if (!alloc_ptrs[3]) {
+		free_array(alloc_ptrs);
 		return false;
 	}
-	temp_components_lifetimes = calloc(size, sizeof(*temp_components_lifetimes));
-	if (!temp_components_lifetimes) {
-		free_array(temp_arrays);
+	alloc_ptrs[4] = calloc(size, sizeof(*components_lifetimes));
+	if (!alloc_ptrs[4]) {
+		free_array(alloc_ptrs);
 		return false;
 	}
 	ecs_free();
-	entities_alive = temp_entities_alive;
-	components_physics = temp_components_physics;
-	components_jumpers = temp_components_jumpers;
-	components_shakers = temp_components_shakers;
-	components_lifetimes = temp_components_lifetimes;
+	entities_alive = alloc_ptrs[0];
+	components_physics = alloc_ptrs[1];
+	components_jumpers = alloc_ptrs[2];
+	components_shakers = alloc_ptrs[3];
+	components_lifetimes = alloc_ptrs[4];
 	return true;
 }
 
