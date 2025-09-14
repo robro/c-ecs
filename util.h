@@ -5,6 +5,8 @@
 
 #define NSECS_IN_SEC 1000000000
 
+#define array_size(array) (sizeof(array) / sizeof(*array))
+
 struct Vec2 {
 	float x;
 	float y;

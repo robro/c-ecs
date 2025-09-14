@@ -47,7 +47,6 @@ const struct Component *test_entity[] = {
 	&test_jumper,
 	&test_shaker,
 	&test_lifetime,
-	NULL
 };
 
 int main(void) {
@@ -56,7 +55,7 @@ int main(void) {
 		return 1;
 	};
 	for (int i = 0; i < MAX_ENTITIES; ++i) {
-		ecs_add_entity(test_entity);
+		ecs_add_entity(test_entity, array_size(test_entity));
 	}
 
 	struct timespec time_start, time_end, sleep_time, work_time, frame_time;

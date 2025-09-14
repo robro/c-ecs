@@ -47,7 +47,7 @@ struct Component {
 
 bool ecs_initialize(uint size);
 
-bool ecs_add_entity(const struct Component **components);
+bool ecs_add_entity(const struct Component **components, uint size);
 
 void ecs_update(float delta);
 

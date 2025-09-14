@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "ecs.h"
+#include "util.h"
 
 uint pool_size;
 uint last_free_index;
@@ -12,8 +13,8 @@ struct ComponentJumper *components_jumpers;
 struct ComponentShaker *components_shakers;
 struct ComponentLifetime *components_lifetimes;
 
-void free_multiple(void **array) {
-	for (int i = 0; array[i] != NULL; ++i) {
+void free_multiple(void **array, uint size) {
+	for (int i = 0; i < size; ++i) {
 		free(array[i]);
 		array[i] = NULL;
 	}
@@ -23,27 +24,27 @@ bool ecs_allocate(uint size) {
 	void *arrays[5] = {};
 	arrays[0] = calloc(size, sizeof(*entities_alive));
 	if (arrays[0] == NULL) {
-		free_multiple(arrays);
+		free_multiple(arrays, array_size(arrays));
 		return false;
 	}
 	arrays[1] = calloc(size, sizeof(*components_physics));
 	if (arrays[1] == NULL) {
-		free_multiple(arrays);
+		free_multiple(arrays, array_size(arrays));
 		return false;
 	}
 	arrays[2] = calloc(size, sizeof(*components_jumpers));
 	if (arrays[2] == NULL) {
-		free_multiple(arrays);
+		free_multiple(arrays, array_size(arrays));
 		return false;
 	}
 	arrays[3] = calloc(size, sizeof(*components_shakers));
 	if (arrays[3] == NULL) {
-		free_multiple(arrays);
+		free_multiple(arrays, array_size(arrays));
 		return false;
 	}
 	arrays[4] = calloc(size, sizeof(*components_lifetimes));
 	if (arrays[4] == NULL) {
-		free_multiple(arrays);
+		free_multiple(arrays, array_size(arrays));
 		return false;
 	}
 	ecs_free();
@@ -62,9 +63,8 @@ void free_arrays() {
 		components_jumpers,
 		components_shakers,
 		components_lifetimes,
-		NULL
 	};
-	free_multiple(arrays);
+	free_multiple(arrays, array_size(arrays));
 }
 
 int entity_get_free_index() {
@@ -168,7 +168,6 @@ const UpdateFunc update_funcs[] = {
 	update_shakers,
 	update_physics,
 	update_lifetime,
-	NULL
 };
 
 bool ecs_initialize(uint size) {
@@ -184,12 +183,12 @@ bool ecs_initialize(uint size) {
 	return true;
 }
 
-bool ecs_add_entity(const struct Component **components) {
+bool ecs_add_entity(const struct Component **components, uint size) {
 	int entity_index = entity_get_free_index();
 	if (entity_index < 0) {
 		return false;
 	}
-	for (int i = 0; components[i] != NULL; ++i) {
+	for (int i = 0; i < size; ++i) {
 		switch (components[i]->type) {
 		case CT_NONE:
 			break;
@@ -212,7 +211,7 @@ bool ecs_add_entity(const struct Component **components) {
 }
 
 void ecs_update(float delta) {
-	for (int i = 0; update_funcs[i] != NULL; ++i) {
+	for (int i = 0; i < array_size(update_funcs); ++i) {
 		update_funcs[i](delta);
 	}
 }
